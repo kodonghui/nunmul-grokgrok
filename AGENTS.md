@@ -1,10 +1,10 @@
 # 눈물이그록그록 · 울보 약 비서
 
-2026-11-01 Grok Bot 빌드데이 데모용이다. Grok Bot이 클라우드 컴퓨터 명령줄에서 부르는 도구 3개를 만든다. 필받음(PillBoot) 설계를 참고했고 코드는 새로 쓴다.
+2026-11-01 Grok Bot 빌드데이 데모용이다. Grok Bot이 클라우드 컴퓨터 명령줄에서 부르는 약 조회·내 약 목록·일정·복용 상태 도구를 만든다. 필받음(PillBoot) 설계를 참고했고 코드는 새로 쓴다.
 레포: https://github.com/kodonghui/nunmul-grokgrok
 
 ## 범위와 순서
-1~3절의 도구와 테스트, README까지가 먼저다. 4절(책상 친구)은 사용자가 따로 시킬 때만 한다.
+1~3절의 도구와 내 약 목록, 테스트, README가 범위다. 내 약은 약 단위로 누적하며 새 등록 때문에 기존 약을 덮어쓰지 않는다. 사진은 입력 방법이다. 4절(책상 친구)은 사용자가 따로 시킬 때만 한다.
 
 ## 실행 환경
 - Python 3 표준 라이브러리만 쓴다(urllib.request, json, datetime, zoneinfo, argparse, re, unicodedata, unittest, pathlib, os, tempfile). 봇 컴퓨터는 업데이트·초기화 때 설치 패키지가 지워진다. 예외는 4절의 desk/ 하나다(내 PC에서만 돈다).
@@ -17,6 +17,14 @@
 - 로컬(윈도우)에서는 py 또는 python으로 돌려도 된다. 경로는 pathlib로 다루고 파일은 UTF-8로 읽고 쓴다.
 
 ## 데이터 모양
+누적형 내 약의 원장은 `state/medication_store.json`이다. 상세 계약과 검증 기준은 [docs/my-meds-v2.md](docs/my-meds-v2.md)를 먼저 따른다. `my_meds.py`가 등록·조회·약별 일정 변경·중단·일정 삭제·약 목록 삭제와 캘린더 반영 대기를 관리한다.
+
+- 약별 내부 ID, 품목코드, 복용량, 복용 때, 등록 시각과 약별 일정(시작·종료·시각·확인 시각)을 저장한다. 사진별 엔티티는 만들지 않는다.
+- 같은 시각의 알림/캘린더 key는 `YYYY-MM-DD|HH:mm`이고, 실제 복용 기록 key는 `약ID|v일정버전|YYYY-MM-DD|HH:mm`이다. 다른 약의 TAKEN을 물려받지 않는다.
+- 원장에 약 목록·약별 복용 기록·재촉 단계·캘린더 반영 대기를 한 번에 저장한다. `schedule.json`은 다시 만들 수 있는 계산 결과다.
+- 기존 `prescription.json`은 확인된 약을 가져오는 입력으로도 받는다. 원장이 없고 기존 처방/일정/복용 파일이 있으면 확인 가능한 기록을 원장에 한 번 이관하고 원본 파일은 수정하지 않는다. 출처가 맞지 않으면 추측하지 않고 오류를 낸다.
+- 아래 단일 처방 JSON과 기존 순수 함수는 v1 호환 입력/검증으로 유지한다. 실제 누적 등록은 `my_meds.py add`, 누적 일정은 `make_schedule.py --store`, 누적 복용 처리는 `dose_state.py --store`를 사용한다.
+
 state/rx_read.json (봇이 사진에서 읽은 값, 못 읽은 칸은 null)
 ```json
 {"readable": true, "medicines": [{"readNo": 1, "readName": "타이레놀정500밀리그램", "readMaker": null, "dosePerTime": 1, "dailyCount": 2, "durationDays": 5, "dosePeriods": null, "timing": "식후 30분", "doseRawText": "1일 2회 5일분"}]}
@@ -73,6 +81,10 @@ dose_state.py due 출력
 - 같은 정상 응답은 5분 동안 메모리에 둬도 된다(실패 응답은 두지 않는다).
 
 ## 2. tools/make_schedule.py
+누적형 사용: `python3 tools/make_schedule.py --store state/medication_store.json --out state/schedule.json`
+약별 기간·확인 시각과 일정을 사용하며, 중단·일정 삭제·목록 삭제를 반영한 원장에서 계산한다. 같은 시각의 약은 묶되 약별 복용 기록은 분리한다. 재방문일은 약별 종료일에서 계산하고 같은 날짜끼리 묶는다. 이미 복용한 약이 있는 회차는 일부 확인, 모두 복용한 회차는 ✅로 구분한다.
+
+v1 호환 사용과 규칙:
 사용: `python3 tools/make_schedule.py --in state/prescription.json [--slots state/slots.json] [--today YYYY-MM-DD] --out state/schedule.json`
 - 약마다 복용 시각 1~3개(HH:mm, 중복 없음, 정렬). 기본 시각은 아침 07:00 · 점심 11:00 · 저녁 17:00 · 자기 전 22:00.
   - dosePeriods(MORNING·NOON·EVENING·BEDTIME)가 있으면 그 시각
@@ -88,6 +100,24 @@ dose_state.py due 출력
   - 병원 일정 제목 "병원 다시 가기 · 약 떨어지기 3일 전", key = "revisit|{revisitDate}"
 
 ## 3. tools/dose_state.py
+누적형은 `--store state/medication_store.json`을 사용한다. 기본 경로에 원장이 있으면 자동 사용한다. `--medicine-id <약ID>`로 같은 회차 중 한 약만 mark/skip할 수 있다. 중단·일정 삭제·목록 삭제는 `my_meds.py`로 수행한다. 기존 `--schedule`/`--doses` 명시 호출과 순수 함수는 v1 호환 모드다. 두 모드의 상태 파일을 섞지 않는다.
+
+### 내 약 목록 명령
+- `python3 tools/my_meds.py list [--all]`
+- `python3 tools/my_meds.py add --in state/prescription.json [--request-id <등록요청ID>]`
+- `python3 tools/my_meds.py set-schedule <약ID> --in state/schedule_patch.json [--at <ISO>]`
+- `python3 tools/my_meds.py stop <약ID> [--at <ISO>]`
+- `python3 tools/my_meds.py clear-schedule <약ID> [--at <ISO>]`
+- `python3 tools/my_meds.py delete <약ID> [--at <ISO>]`
+- `python3 tools/my_meds.py calendar-plan`
+- `python3 tools/my_meds.py calendar-ack <key> --fingerprint <값> [--event-id <일정ID>]`
+- 모든 명령에 `--store <경로>`를 줄 수 있다. 수정 명령은 `--if-revision <조회한 revision>`으로 낡은 초안의 저장을 거부할 수 있다.
+- 같은 품목코드의 미삭제 약을 자동 합산하거나 덮어쓰지 않는다. 중복 등록은 전체 요청을 거부하고 명시적인 일정 변경을 사용한다. 품목코드 없는 직접 입력은 정규화한 동일 이름의 중복을 거부한다.
+- 중단은 종료일을 오늘로 줄이고 해당 약의 남은 PENDING 재촉·미래 일정을 중지한다. 봇이 복용 중단을 판단하지 않는다.
+- 일정 삭제는 약을 남기고 일정만 비운다. 목록 삭제는 deletedAt을 기록해 현재 목록에서 제외한다. 과거 복용 기록은 유지한다.
+- 캘린더는 UPSERT/DELETE 작업과 fingerprint를 반환한다. Grok Bot이 실제 반영하고 calendar-ack로 성공을 기록한다. 실패한 작업은 남겨 두며, 제목 변경만으로 삭제 완료를 기록하지 않는다. 실제 캘린더 호출·자동화 생성은 Python 도구가 하지 않는다.
+
+### v1 호환 명령과 공통 말투/시간 규칙
 사용:
 - `python3 tools/dose_state.py due --now <ISO> [--schedule state/schedule.json] [--doses state/doses.json]`
 - `python3 tools/dose_state.py mark [<key>] --source chat|desk [--at <ISO>]`
@@ -133,6 +163,9 @@ dose_state.py due 출력
 - 22:00 회차: 23:31에는 MISSED로 바뀌지만 조용한 시간이라 출력 없음
 - 키 없음 → rx_lookup 카드가 모두 FAILED(NO_KEY), 네트워크 호출 0회
 - rx_lookup: 말줄임표 다섯 경우, FAILED와 NOT_FOUND 구분, 함량·제형·서방이 다르면 탈락, 후보 5개 상한·정확 일치 먼저
+- v2: 여러 번 등록해도 기존 약 유지, 약별 시작일/확인 시각, 부분 복용, 다른 약의 TAKEN 분리, 약별 일정 변경·중단·일정 삭제·목록 삭제, 과거 기록 보존
+- v2: 동일 요청 중복 실행, 중복 품목 거부 시 전체 롤백, 동시 등록/복용 확인, revision 충돌, v1 이관과 출처 불일치 거부
+- v2: 같은 시각의 다른 약을 남긴 캘린더 수정, 마지막 약 제거 시 삭제 작업, 반영 실패 재시도·중복/낡은 ack 거부
 - (4절을 할 때) 보드 없이 가짜 시리얼로: 단계 전환, B 두 번 → 웹훅 한 번, 웹훅 실패 처리
 
 ## README
