@@ -176,7 +176,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise urllib.error.HTTPError(request.full_url, code, "Redirect rejected", headers, fp)
 
 
-def parse_response(raw):
+def parse_response(raw, include_pagination=False):
     try:
         root = json.loads(raw)
     except (ValueError, UnicodeError, TypeError):
@@ -195,11 +195,13 @@ def parse_response(raw):
     if isinstance(items, dict) and "item" in items:
         items = items["item"]
     if items is None or items == "" or items == {}:
-        return []
-    if isinstance(items, dict):
-        return [items]
+        items = []
+    elif isinstance(items, dict):
+        items = [items]
     if not isinstance(items, list):
         raise ToolError("INVALID_RESPONSE", "공공데이터 items 형식을 확인할 수 없습니다.")
+    if include_pagination:
+        return {"items": items, "totalCount": body.get("totalCount"), "pageNo": body.get("pageNo"), "numOfRows": body.get("numOfRows")}
     return items
 
 
@@ -217,6 +219,12 @@ class PublicDataClient:
             raise ToolError("NO_KEY", "PUBLIC_DATA_SERVICE_KEY가 없습니다.")
 
     def get(self, path, parameters):
+        return self._get(path, parameters, False)
+
+    def get_page(self, path, parameters):
+        return self._get(path, parameters, True)
+
+    def _get(self, path, parameters, include_pagination):
         self.require_credentials()
         try:
             base = urllib.parse.urlsplit(self.base)
@@ -241,7 +249,7 @@ class PublicDataClient:
                 retryable = True
                 failure = ToolError("NETWORK_ERROR", "공공데이터에 연결하거나 응답을 읽을 수 없습니다.")
             else:
-                return parse_response(raw)
+                return parse_response(raw, include_pagination)
             if attempt == 0 and retryable:
                 self.sleep(0.5)
             else:
@@ -355,6 +363,17 @@ def explain(item_seq, client):
     return result
 
 
+def create_client(environ=None):
+    settings = os.environ if environ is None else environ
+    if settings.get("PUBLIC_DATA_RELAY_URL") or settings.get("PUBLIC_DATA_RELAY_TOKEN"):
+        if __package__:
+            from .rx_relay import RelayClient
+        else:
+            from rx_relay import RelayClient
+        return RelayClient(settings)
+    return PublicDataClient(settings)
+
+
 def main(argv=None):
     parser = JsonArgumentParser(description=__doc__)
     parser.add_argument("--in", dest="input", type=Path)
@@ -366,14 +385,7 @@ def main(argv=None):
     if args.explain is not None and (args.input is not None or args.out is not None):
         parser.error("--explain과 파일 조회는 따로 실행해 주세요.")
     load_env(ROOT, os.environ)
-    if os.environ.get("PUBLIC_DATA_RELAY_URL") or os.environ.get("PUBLIC_DATA_RELAY_TOKEN"):
-        if __package__:
-            from .rx_relay import RelayClient
-        else:
-            from rx_relay import RelayClient
-        client = RelayClient()
-    else:
-        client = PublicDataClient()
+    client = create_client()
     if args.explain is not None:
         return explain(args.explain, client)
     result = lookup(read_json(args.input), client)

@@ -410,8 +410,12 @@ def _past_event(event, at):
     return parse_instant(event["start"]) < at
 
 
-def refresh_calendar(store, at):
+def refresh_calendar(store, at, extra_events=None):
     desired = {event["key"]: event for event in build_store_schedule(store)["calendarEvents"]}
+    for event in extra_events or []:
+        if event["key"] in desired:
+            raise ToolError("INVALID_INPUT", "캘린더 일정 key가 중복됩니다.")
+        desired[event["key"]] = event
     calendar = store["calendar"]
     for key, applied in calendar["applied"].items():
         if (key not in desired and _past_event(applied["event"], at)

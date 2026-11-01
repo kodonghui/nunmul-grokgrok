@@ -1,0 +1,19 @@
+{
+  "profileId": "할머니",
+  "source": "voice",
+  "requestId": "synthetic-medicine-20261101-1",
+  "action": "medicine.add",
+  "payload": {
+    "items": [
+      {
+        "name": "가상A정",
+        "itemSeq": null,
+        "dosePerTime": 1,
+        "startDate": "2026-11-01",
+        "durationDays": 5,
+        "doseTimes": ["07:00", "17:00"],
+        "timing": "사용자 확인 문구"
+      }
+    ]
+  }
+}

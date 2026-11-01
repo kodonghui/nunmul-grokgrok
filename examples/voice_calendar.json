@@ -1,0 +1,14 @@
+{
+  "profileId": "할머니",
+  "source": "voice",
+  "requestId": "synthetic-visit-20261101-1",
+  "action": "appointment.add",
+  "payload": {
+    "title": "병원 방문",
+    "start": "2026-11-10T15:00:00+09:00",
+    "end": "2026-11-10T16:00:00+09:00",
+    "caregiver": "엄마",
+    "reminderDays": [7, 1],
+    "reminderTime": "09:00"
+  }
+}

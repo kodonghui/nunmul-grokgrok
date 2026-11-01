@@ -129,6 +129,7 @@ def main(argv=None):
         sub.add_argument("--schedule", type=Path)
         sub.add_argument("--doses", type=Path)
         sub.add_argument("--store", type=Path)
+        sub.add_argument("--profile")
         sub.add_argument("--medicine-id", action="append", default=[])
         if command == "due":
             sub.add_argument("--now", required=True)
@@ -147,18 +148,18 @@ def main(argv=None):
     use_store = args.store is not None or (args.schedule is None and args.doses is None)
     if use_store:
         if __package__:
-            from .med_store import DEFAULT_STORE, store_due, store_mark, transact
+            from .family_store import DEFAULT_STORE, due as store_due, mark as store_mark, transact
         else:
-            from med_store import DEFAULT_STORE, store_due, store_mark, transact
+            from family_store import DEFAULT_STORE, due as store_due, mark as store_mark, transact
         def action(store):
             if args.command == "due":
-                return store_due(store, now, read_json(VOICE_PATH))
-            return store_mark(store, now, source=args.source if args.command == "mark" else None,
+                return store_due(store, now, read_json(VOICE_PATH), args.profile)
+            return store_mark(store, args.profile, now, source=args.source if args.command == "mark" else None,
                               key=args.key, medicine_ids=args.medicine_id, skip=args.command == "skip",
                               voice=read_json(VOICE_PATH) if args.command == "mark" else None)
         return transact(args.store or DEFAULT_STORE, action, now)
-    if args.medicine_id:
-        parser.error("--medicine-id는 누적 원장 모드에서 사용해 주세요.")
+    if args.medicine_id or args.profile:
+        parser.error("--medicine-id/--profile은 가족 원장 모드에서 사용해 주세요.")
     args.schedule = args.schedule or Path("state/schedule.json")
     args.doses = args.doses or Path("state/doses.json")
     doses_path = args.doses.resolve()

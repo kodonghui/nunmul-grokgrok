@@ -14,10 +14,12 @@ import urllib.request
 
 if __package__:
     from .common import JsonArgumentParser, ToolError, run_cli
+    from .dur_rules import DUR_FIELDS, DUR_PATHS, validate_page
     from .rx_lookup import (CONNECT_TIMEOUT, EXPLAIN_PATH, PERMIT_PATH, ROOT, PublicDataClient,
                             TimedHTTPConnection, TimedHTTPSConnection, _NoRedirect, load_env)
 else:
     from common import JsonArgumentParser, ToolError, run_cli
+    from dur_rules import DUR_FIELDS, DUR_PATHS, validate_page
     from rx_lookup import (CONNECT_TIMEOUT, EXPLAIN_PATH, PERMIT_PATH, ROOT, PublicDataClient,
                            TimedHTTPConnection, TimedHTTPSConnection, _NoRedirect, load_env)
 
@@ -73,6 +75,17 @@ def query_upstream(payload, client):
                 or not re.fullmatch(r"[0-9]{1,20}", payload["itemSeq"])):
             raise ToolError("RELAY_INVALID_INPUT", ERRORS["RELAY_INVALID_INPUT"])
         rows, fields = client.get(EXPLAIN_PATH, {"itemSeq": payload["itemSeq"], "pageNo": 1, "numOfRows": 1}), EXPLAIN_FIELDS
+    elif operation == "dur":
+        if (set(payload) != {"operation", "type", "itemSeq", "pageNo"}
+                or not isinstance(payload.get("type"), str) or payload["type"] not in DUR_PATHS
+                or not isinstance(payload.get("itemSeq"), str) or not re.fullmatch(r"[0-9]{1,20}", payload["itemSeq"])
+                or type(payload.get("pageNo")) is not int or not 1 <= payload["pageNo"] <= 100):
+            raise ToolError("RELAY_INVALID_INPUT", ERRORS["RELAY_INVALID_INPUT"])
+        number = payload["pageNo"]
+        page = validate_page(client.get_page(DUR_PATHS[payload["type"]],
+                            {"itemSeq": payload["itemSeq"], "pageNo": number, "numOfRows": 100}), number)
+        return {**page, "items": [{field: row[field] for field in DUR_FIELDS if field in row}
+                                  if isinstance(row, dict) else {} for row in page["items"]]}
     else:
         raise ToolError("RELAY_INVALID_INPUT", ERRORS["RELAY_INVALID_INPUT"])
     return {"items": [{field: row[field] for field in fields if field in row}
@@ -247,6 +260,12 @@ class RelayClient:
             raise ToolError("NO_RELAY_TOKEN", "별도 중계 인증 토큰을 확인해 주세요.")
 
     def get(self, path, parameters):
+        return self._get(path, parameters, False)
+
+    def get_page(self, path, parameters):
+        return self._get(path, parameters, True)
+
+    def _get(self, path, parameters, pagination):
         self.require_credentials()
         try:
             parsed = urllib.parse.urlsplit(self.url)
@@ -263,6 +282,9 @@ class RelayClient:
                 payload["maker"] = parameters["entp_name"]
         elif path == EXPLAIN_PATH:
             payload = {"operation": "explain", "itemSeq": parameters.get("itemSeq")}
+        elif pagination and path in DUR_PATHS.values():
+            kind = next(kind for kind, endpoint in DUR_PATHS.items() if endpoint == path)
+            payload = {"operation": "dur", "type": kind, "itemSeq": parameters.get("itemSeq"), "pageNo": parameters.get("pageNo")}
         else:
             raise ToolError("RELAY_INVALID_INPUT", ERRORS["RELAY_INVALID_INPUT"])
         request = urllib.request.Request(self.url + "/v1/query", data=json.dumps(payload).encode(),
@@ -292,6 +314,8 @@ class RelayClient:
                     body = _json(raw)
                 except (ValueError, UnicodeError):
                     raise ToolError("INVALID_RELAY_RESPONSE", "중계 JSON 응답을 확인해 주세요.") from None
+                if pagination:
+                    return validate_page(body, parameters.get("pageNo"))
                 if not isinstance(body, dict) or set(body) != {"items"} or not isinstance(body["items"], list):
                     raise ToolError("INVALID_RELAY_RESPONSE", "중계 응답 형식을 확인해 주세요.")
                 return body["items"]

@@ -1,0 +1,15 @@
+{
+  "INTERACTION": [
+    {"ITEM_SEQ":"900001","TYPE_NAME":"병용금기","MIXTURE_ITEM_SEQ":"900002","PROHBT_CONTENT":"합성 시험용 병용 항목. 실제 의약품 안내가 아님.","INGR_KOR_NAME":"가상성분A","CHANGE_DATE":"20261101"},
+    {"ITEM_SEQ":"900002","TYPE_NAME":"병용금기","MIXTURE_ITEM_SEQ":"900001","PROHBT_CONTENT":"합성 시험용 병용 항목. 실제 의약품 안내가 아님.","INGR_KOR_NAME":"가상성분B","CHANGE_DATE":"20261101"}
+  ],
+  "AGE": [
+    {"ITEM_SEQ":"900001","TYPE_NAME":"특정연령대금기","PROHBT_CONTENT":"12세 미만","INGR_NAME":"가상성분A","CHANGE_DATE":"20261101"}
+  ],
+  "ELDERLY": [
+    {"ITEM_SEQ":"900001","TYPE_NAME":"노인주의","PROHBT_CONTENT":"합성 시험용 노인주의 항목","CHANGE_DATE":"20261101"}
+  ],
+  "PREGNANCY": [
+    {"ITEM_SEQ":"900001","TYPE_NAME":"임부금기","PROHBT_CONTENT":"합성 시험용 임부금기 항목","NOTIFICATION_DATE":"20261101"}
+  ]
+}

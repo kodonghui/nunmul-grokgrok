@@ -129,6 +129,7 @@ def main(argv=None):
     parser = JsonArgumentParser(description=__doc__)
     parser.add_argument("--in", dest="input", type=Path)
     parser.add_argument("--store", type=Path)
+    parser.add_argument("--profile")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--slots", type=Path)
     parser.add_argument("--today")
@@ -141,12 +142,14 @@ def main(argv=None):
         if args.store.resolve() == args.out.resolve():
             parser.error("조회 결과의 출력 경로와 원장 경로는 달라야 합니다.")
         if __package__:
-            from .med_store import build_store_schedule, transact
+            from .family_store import schedule as build_store_schedule, transact
         else:
-            from med_store import build_store_schedule, transact
-        schedule = transact(args.store, build_store_schedule, include_changes=False)
+            from family_store import schedule as build_store_schedule, transact
+        schedule = transact(args.store, lambda family: build_store_schedule(family, args.profile), include_changes=False)
         atomic_write_json(args.out, schedule)
         return schedule
+    if args.profile:
+        parser.error("--profile은 --store와 사용해 주세요.")
     slots_path = args.slots
     if slots_path is None and Path("state/slots.json").is_file():
         slots_path = Path("state/slots.json")

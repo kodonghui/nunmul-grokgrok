@@ -5,14 +5,10 @@ from pathlib import Path
 
 if __package__:
     from .common import JsonArgumentParser, SEOUL, parse_instant, read_json, run_cli
-    from .med_store import (DEFAULT_STORE, acknowledge_calendar, add_medicines, calendar_plan,
-                            clear_schedule, delete_medicine, list_medicines, set_schedule,
-                            stop_medicine, transact)
+    from .family_store import DEFAULT_STORE, acknowledge, calendar_plan, medicine_action, transact
 else:
     from common import JsonArgumentParser, SEOUL, parse_instant, read_json, run_cli
-    from med_store import (DEFAULT_STORE, acknowledge_calendar, add_medicines, calendar_plan,
-                           clear_schedule, delete_medicine, list_medicines, set_schedule,
-                           stop_medicine, transact)
+    from family_store import DEFAULT_STORE, acknowledge, calendar_plan, medicine_action, transact
 
 
 def main(argv=None):
@@ -22,6 +18,7 @@ def main(argv=None):
         sub = commands.add_parser(command)
         sub.add_argument("--store", type=Path, default=DEFAULT_STORE)
         sub.add_argument("--at")
+        sub.add_argument("--profile")
         sub.add_argument("--if-revision", type=int)
         if command == "list":
             sub.add_argument("--all", action="store_true")
@@ -45,21 +42,14 @@ def main(argv=None):
         slots = read_json(slots_path) if slots_path is not None else None
         payload = read_json(args.input)
     def action(store):
-        if args.command == "list":
-            return list_medicines(store, at, args.all)
-        if args.command == "add":
-            return add_medicines(store, payload, at, args.request_id, slots)
-        if args.command == "set-schedule":
-            return set_schedule(store, args.medicine_id, payload, at, slots)
-        if args.command == "stop":
-            return stop_medicine(store, args.medicine_id, at)
-        if args.command == "clear-schedule":
-            return clear_schedule(store, args.medicine_id, at)
-        if args.command == "delete":
-            return delete_medicine(store, args.medicine_id, at)
         if args.command == "calendar-plan":
-            return calendar_plan(store)
-        return acknowledge_calendar(store, args.key, args.fingerprint, args.event_id)
+            return calendar_plan(store, args.profile)
+        if args.command == "calendar-ack":
+            return acknowledge(store, args.key, args.fingerprint, args.event_id, args.profile)
+        operation = {"set-schedule": "schedule", "clear-schedule": "clear"}.get(args.command, args.command)
+        return medicine_action(store, args.profile, operation, at,
+                               payload=payload if args.command in ("add", "set-schedule") else {"all": args.all} if args.command == "list" else None,
+                               medicine_id=getattr(args, "medicine_id", None), request_id=getattr(args, "request_id", None), slots=slots)
     return transact(args.store, action, at, args.if_revision, include_changes=args.command not in ("list", "calendar-plan"))
 
 

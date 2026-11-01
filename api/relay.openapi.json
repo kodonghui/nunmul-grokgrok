@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nunmul notebook lookup relay",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "SPEC-RX-RELAY-001. Temporary authenticated read-only bridge. No medication state or patient fields."
   },
   "paths": {
@@ -143,6 +143,39 @@
                         "pattern": "^[0-9]{1,20}$"
                       }
                     }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "operation",
+                      "type",
+                      "itemSeq",
+                      "pageNo"
+                    ],
+                    "properties": {
+                      "operation": {
+                        "const": "dur"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "INTERACTION",
+                          "AGE",
+                          "ELDERLY",
+                          "PREGNANCY"
+                        ]
+                      },
+                      "itemSeq": {
+                        "type": "string",
+                        "pattern": "^[0-9]{1,20}$"
+                      },
+                      "pageNo": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      }
+                    }
                   }
                 ]
               },
@@ -158,6 +191,14 @@
                     "operation": "explain",
                     "itemSeq": "900000101"
                   }
+                },
+                "dur": {
+                  "value": {
+                    "operation": "dur",
+                    "type": "INTERACTION",
+                    "itemSeq": "900000101",
+                    "pageNo": 1
+                  }
                 }
               }
             }
@@ -169,41 +210,111 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "items"
-                  ],
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "maxItems": 100,
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "CANCEL_NAME": {},
-                          "CHANGE_DATE": {},
-                          "ENTP_NAME": {},
-                          "ETC_OTC_CODE": {},
-                          "ETC_OTC_NAME": {},
-                          "ITEM_INGR_NAME": {},
-                          "ITEM_NAME": {},
-                          "ITEM_SEQ": {},
-                          "atpnQesitm": {},
-                          "atpnWarnQesitm": {},
-                          "depositMethodQesitm": {},
-                          "efcyQesitm": {},
-                          "intrcQesitm": {},
-                          "itemName": {},
-                          "itemSeq": {},
-                          "seQesitm": {},
-                          "updateDe": {},
-                          "useMethodQesitm": {}
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "maxItems": 100,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "CANCEL_NAME": {},
+                              "CHANGE_DATE": {},
+                              "ENTP_NAME": {},
+                              "ETC_OTC_CODE": {},
+                              "ETC_OTC_NAME": {},
+                              "ITEM_INGR_NAME": {},
+                              "ITEM_NAME": {},
+                              "ITEM_SEQ": {},
+                              "atpnQesitm": {},
+                              "atpnWarnQesitm": {},
+                              "depositMethodQesitm": {},
+                              "efcyQesitm": {},
+                              "intrcQesitm": {},
+                              "itemName": {},
+                              "itemSeq": {},
+                              "seQesitm": {},
+                              "updateDe": {},
+                              "useMethodQesitm": {},
+                              "TYPE_NAME": {},
+                              "PROHBT_CONTENT": {},
+                              "MIXTURE_ITEM_SEQ": {},
+                              "INGR_KOR_NAME": {},
+                              "INGR_NAME": {},
+                              "CLASS_NAME": {},
+                              "NOTIFICATION_DATE": {}
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "items",
+                        "totalCount",
+                        "pageNo",
+                        "numOfRows"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "maxItems": 100,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "CANCEL_NAME": {},
+                              "CHANGE_DATE": {},
+                              "ENTP_NAME": {},
+                              "ETC_OTC_CODE": {},
+                              "ETC_OTC_NAME": {},
+                              "ITEM_INGR_NAME": {},
+                              "ITEM_NAME": {},
+                              "ITEM_SEQ": {},
+                              "atpnQesitm": {},
+                              "atpnWarnQesitm": {},
+                              "depositMethodQesitm": {},
+                              "efcyQesitm": {},
+                              "intrcQesitm": {},
+                              "itemName": {},
+                              "itemSeq": {},
+                              "seQesitm": {},
+                              "updateDe": {},
+                              "useMethodQesitm": {},
+                              "TYPE_NAME": {},
+                              "PROHBT_CONTENT": {},
+                              "MIXTURE_ITEM_SEQ": {},
+                              "INGR_KOR_NAME": {},
+                              "INGR_NAME": {},
+                              "CLASS_NAME": {},
+                              "NOTIFICATION_DATE": {}
+                            }
+                          }
+                        },
+                        "totalCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "pageNo": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "numOfRows": {
+                          "const": 100
                         }
                       }
                     }
-                  }
+                  ]
                 },
                 "examples": {
                   "empty": {
@@ -222,6 +333,14 @@
                           "CANCEL_NAME": "정상"
                         }
                       ]
+                    }
+                  },
+                  "durEmpty": {
+                    "value": {
+                      "items": [],
+                      "totalCount": 0,
+                      "pageNo": 1,
+                      "numOfRows": 100
                     }
                   }
                 }

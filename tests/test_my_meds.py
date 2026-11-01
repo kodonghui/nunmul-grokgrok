@@ -467,6 +467,10 @@ class MigrationTests(StoreCase):
 
 
 class StoreCliTests(unittest.TestCase):
+    def nested(self, state=None):
+        root = read_json(self.store) if state is None else state
+        return next(iter(root["profiles"].values()))["store"]
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -505,7 +509,7 @@ class StoreCliTests(unittest.TestCase):
     def test_corrupt_dose_record_returns_json_error_and_preserves_original(self):
         self.add()
         state = read_json(self.store)
-        next(iter(state["doses"].values())).pop("name")
+        next(iter(self.nested(state)["doses"].values())).pop("name")
         atomic_write_json(self.store, state)
         before = self.store.read_bytes()
         result = self.call("my_meds.py", "list", success=False)
@@ -539,7 +543,7 @@ class StoreCliTests(unittest.TestCase):
                                       text=True, encoding="utf-8") for p in paths]
         outputs = [p.communicate(timeout=15) for p in processes]
         self.assertTrue(all(p.returncode == 0 for p in processes), outputs)
-        self.assertEqual(len(read_json(self.store)["medicines"]), 2)
+        self.assertEqual(len(self.nested()["medicines"]), 2)
 
     def test_simultaneous_due_returns_one_message(self):
         self.add()
@@ -558,7 +562,7 @@ class StoreCliTests(unittest.TestCase):
         outputs = [p.communicate(timeout=15) for p in processes]
         self.assertTrue(all(p.returncode == 0 for p in processes), outputs)
         self.assertEqual(json.loads(outputs[0][0])["added"], json.loads(outputs[1][0])["added"])
-        self.assertEqual(len(read_json(self.store)["medicines"]), 1)
+        self.assertEqual(len(self.nested()["medicines"]), 1)
 
     def test_simultaneous_mark_and_skip_do_not_erase_taken(self):
         medicine_id = self.add()["added"][0]
@@ -570,13 +574,13 @@ class StoreCliTests(unittest.TestCase):
                                       text=True, encoding="utf-8") for command in commands]
         outputs = [p.communicate(timeout=15) for p in processes]
         self.assertTrue(all(p.returncode == 0 for p in processes), outputs)
-        first = next(d for d in read_json(self.store)["doses"].values() if d["at"] == "2026-11-01T17:00:00+09:00")
+        first = next(d for d in self.nested()["doses"].values() if d["at"] == "2026-11-01T17:00:00+09:00")
         self.assertEqual(first["state"], "TAKEN")
 
     def test_missing_store_fields_return_json_error(self):
         self.add()
         state = read_json(self.store)
-        next(iter(state["medicines"].values())).pop("schedule")
+        next(iter(self.nested(state)["medicines"].values())).pop("schedule")
         atomic_write_json(self.store, state)
         result = self.call("my_meds.py", "list", success=False)
         self.assertEqual(result["error"]["code"], "INVALID_STORE")
@@ -584,7 +588,7 @@ class StoreCliTests(unittest.TestCase):
     def test_invalid_input_and_corrupt_store_are_json_errors(self):
         self.add()
         state = read_json(self.store)
-        next(iter(state["doses"].values()))["state"] = "CORRUPT"
+        next(iter(self.nested(state)["doses"].values()))["state"] = "CORRUPT"
         atomic_write_json(self.store, state)
         result = self.call("my_meds.py", "list", success=False)
         self.assertEqual(result["error"]["code"], "INVALID_STORE")
