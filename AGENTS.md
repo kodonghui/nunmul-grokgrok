@@ -15,6 +15,7 @@
 - 키가 없으면 rx_lookup은 조회하지 않고 모든 카드를 FAILED(code=NO_KEY)로 낸다. make_schedule·dose_state는 키 없이 동작한다.
 - 레포는 공개해도 되게 만든다(비밀값·개인정보 없음). Bot Marketplace에 봇 템플릿으로 올리면 다른 사람 봇이 이 레포를 받아 쓴다.
 - 로컬(윈도우)에서는 py 또는 python으로 돌려도 된다. 경로는 pathlib로 다루고 파일은 UTF-8로 읽고 쓴다.
+- 한국 노트북 조회 중계는 1절의 선택 연결 방식이다. `PUBLIC_DATA_RELAY_URL`·`PUBLIC_DATA_RELAY_TOKEN`이 있으면 별도 인증으로 조회만 중계하며 공식 서비스 키는 노트북에 둔다. 중계 설정이 불완전하면 직접 조회로 몰래 전환하지 않는다. 중계 계약은 `docs/rx-relay.md`와 `api/relay.openapi.json`을 먼저 따른다. 4절 책상 친구와는 별개다.
 
 ## 데이터 모양
 누적형 내 약의 원장은 `state/medication_store.json`이다. 상세 계약과 검증 기준은 [docs/my-meds-v2.md](docs/my-meds-v2.md)를 먼저 따른다. `my_meds.py`가 등록·조회·약별 일정 변경·중단·일정 삭제·약 목록 삭제와 캘린더 반영 대기를 관리한다.
@@ -60,7 +61,7 @@ dose_state.py due 출력
 설명: `python3 tools/rx_lookup.py --explain <itemSeq>`
 - 이름 검색 API(의약품 제품 허가정보 상세): https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnDtlInq08
   파라미터 serviceKey, type=json, item_name, entp_name(제약사를 읽었을 때만), pageNo=1, numOfRows=100
-  쓰는 필드 ITEM_SEQ, ITEM_NAME, ENTP_NAME, ETC_OTC_NAME, CANCEL_NAME, ITEM_INGR_NAME, CHANGE_DATE
+  쓰는 필드 ITEM_SEQ, ITEM_NAME, ENTP_NAME, ETC_OTC_CODE(실제 API의 전문/일반 구분), ETC_OTC_NAME(호환 별칭), CANCEL_NAME, ITEM_INGR_NAME, CHANGE_DATE. 두 구분 필드가 모두 있으면 뜻이 일치해야 한다.
 - 설명 API(e약은요): https://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList
   파라미터 serviceKey, type=json, itemSeq, pageNo=1, numOfRows=1
   쓰는 필드 itemName, efcyQesitm, useMethodQesitm, atpnWarnQesitm, atpnQesitm, intrcQesitm, seQesitm, depositMethodQesitm, updateDe. 출처 이름과 updateDe를 함께 낸다. 없으면 NOT_FOUND.
