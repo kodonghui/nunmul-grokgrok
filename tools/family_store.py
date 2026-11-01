@@ -46,7 +46,7 @@ def _profile(profile_id, alias, at, store=None):
     return {"id": profile_id, "alias": alias, "relationship": "SELF" if alias == "나" else "FAMILY",
             "createdAt": iso(at), "clinical": _clinical({}, at),
             "store": store if store is not None else meds.empty_store(), "appointments": {},
-            "calendarAcks": {}, "legacyKeys": []}
+            "calendarAcks": {}, "legacyKeys": [], "deskRequests": {}}
 
 
 def empty_family(at):
@@ -79,6 +79,19 @@ def validate_family(family):
         at = parse_instant(profile["createdAt"])
         _clinical(profile["clinical"], at)
         meds.validate_store(profile["store"])
+        desk_requests = profile.get("deskRequests", {})
+        if not isinstance(desk_requests, dict):
+            raise ToolError("INVALID_STORE", "책상 요청 영수증을 확인해 주세요.")
+        for request_id, receipt in desk_requests.items():
+            if (not isinstance(request_id, str) or not re.fullmatch(r"desk_[0-9a-f]{64}", request_id)
+                    or not isinstance(receipt, dict) or not isinstance(receipt.get("digest"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", receipt["digest"])
+                    or not isinstance(receipt.get("result"), dict)
+                    or receipt["result"].get("requestId") != request_id
+                    or receipt["result"].get("profileId") != profile_id
+                    or receipt["result"].get("recorded") is not True):
+                raise ToolError("INVALID_STORE", "저장된 책상 요청 영수증을 확인해 주세요.")
+            parse_instant(receipt.get("receivedAt"), "desk.receivedAt")
         for appointment_id, appointment in profile["appointments"].items():
             if (not isinstance(appointment, dict) or appointment.get("id") != appointment_id
                     or not isinstance(appointment_id, str) or not re.fullmatch(r"appt_[0-9a-f]{32}", appointment_id)
@@ -415,11 +428,19 @@ def _load(path, at):
     return family, raw, True
 
 
-def transact(path, action, at=None, expected_revision=None, include_changes=True):
+def transact(path, action, at=None, expected_revision=None, include_changes=True, require_existing=False):
     at = (at or datetime.now(SEOUL)).astimezone(SEOUL)
     path = Path(path).resolve()
     with state_lock(path):
-        family, backup, converted = _load(path, at)
+        if require_existing:
+            if not path.is_file():
+                raise ToolError("STORE_NOT_READY", "먼저 기존 가족 v3 원장을 준비해 주세요.")
+            raw = read_json(path)
+            if not isinstance(raw, dict) or raw.get("schemaVersion") != 3:
+                raise ToolError("STORE_NOT_READY", "버튼 수신 전에 가족 v3 이관을 완료해 주세요.")
+            family, backup, converted = validate_family(raw), None, False
+        else:
+            family, backup, converted = _load(path, at)
         before = deepcopy(family)
         if expected_revision is not None and expected_revision != family["revision"]:
             raise ToolError("REVISION_CONFLICT", "가족 목록이 바뀌었습니다. 최신 초안을 확인해 주세요.")

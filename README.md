@@ -27,6 +27,7 @@ python3 tools/make_schedule.py --store state/medication_store.json --out state/s
 python3 tools/dose_state.py due --now "2026-11-01T17:12:00+09:00"
 python3 tools/dose_state.py mark <scoped-key> --profile <프로필> --medicine-id <약ID> --source chat --at "2026-11-01T17:13:00+09:00"
 python3 tools/dose_state.py skip <scoped-key> --profile <프로필> --medicine-id <약ID> --at "2026-11-01T17:13:00+09:00"
+python3 tools/desk_event.py --profile <보드에 연결한 실제 프로필ID> --in state/inbox/<요청파일>.json
 python3 tools/my_meds.py calendar-plan
 python3 tools/my_meds.py calendar-ack <scoped-key> --profile <프로필> --fingerprint <fingerprint> --event-id <eventId>
 ```
@@ -105,6 +106,8 @@ Python 도구는 사진 판독·캘린더 쓰기·채팅 전송을 하지 않습
 같은 ack의 재실행은 무해합니다. 작업 내용이 바뀌면 이전 fingerprint는 `STALE_CALENDAR_CHANGE`로 거부합니다. 생성 성공 여부가 불명확한 채 취소한 일정도 DELETE로 남겨 정리합니다. 제목에 ‘중단’을 붙이는 것만으로 삭제 완료를 기록하지 않습니다. 약 목록 변경과 캘린더 반영을 순서대로 실행하고, 반영 도중 목록이 바뀌면 최신 계획을 다시 읽습니다.
 
 ## 파일과 출력
+
+책상 버튼 수신은 [profile-key-v1 계약](docs/desk-receiver.md)을 따릅니다. Grok 네이티브 웹훅이 접근을 통제한 이벤트를 `desk_event.py`에 전달하며 Python HTTP 서버를 추가하지 않습니다. CLI의 --profile은 운영자가 고정한 ID이고 이벤트에서 덮어쓰지 않습니다. 기존 v3 원장 안에서 정확한 약·회차·일정 버전을 검사하고, 복용 기록과 중복 요청 영수증을 한 번에 저장합니다. 오래된 일정·다른 가족·중단/삭제된 약은 기록하지 않습니다. `recorded=true`는 CLI 검증 결과, HTTP200은 접수이며 실제 Calendar 성공은 별도입니다. [그록 설정용 복붙 지시문](docs/grok-bot-desk-setup.md)을 제공합니다.
 
 | 파일 | 내용 |
 | --- | --- |

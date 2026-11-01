@@ -12,6 +12,7 @@ erDiagram
     PROFILE ||--o{ APPOINTMENT : owns
     PROFILE ||--o{ INTAKE_DRAFT : targets
     PROFILE ||--o{ CALENDAR_CHANGE : scopes
+    PROFILE ||--o{ DESK_RECEIPT : accepts
     PROFILE {
         string id PK
         string alias UK
@@ -56,6 +57,12 @@ erDiagram
         object payload
         object result
     }
+    DESK_RECEIPT {
+        string requestId PK
+        string digest
+        string receivedAt
+        object result "recorded, replayed, notify"
+    }
 ```
 
 - TBL-FAM-001 profile은 JSON의 profiles[id]에 해당한다. 약·복용·알림·등록 요청·캘린더는 각 프로필의 store 안에 분리한다.
@@ -63,6 +70,7 @@ erDiagram
 - TBL-FAM-005 appointment는 profiles[id].appointments에 해당하며 취소는 cancelledAt으로 남긴다. 프로필은 방문 대상이고 caregiver는 동행 별칭이다. 다른 계정 FK/공유 권한은 만들지 않는다. reminderDays·reminderTime에서 계산한 날짜별 발송 기록을 sentReminders에 보존한다. 변경 이력은 이전 날짜·동행·알림 설정을 포함한다. 병원 접수·예약 시스템의 데이터는 없다.
 - TBL-FAM-006 intake_draft는 루트 drafts에 해당하고 profileId가 필수다. 미확정 초안으로 약·예약을 만들지 않는다.
 - TBL-FAM-007 calendar_change는 각 v2 calendar를 외부 출력에서 profile ID로 구분한다. 외부 event ID와 옛 key의 대응을 보존한다.
+- TBL-DESK-RX-001 desk_receipt는 profiles[id].deskRequests의 선택적 요청 영수증이다. 복용 기록과 같은 원자적 저장에 포함하며 기존 v3는 필드 없이도 호환된다. requestId와 전체 입력 digest로 중복·내용 충돌을 구분한다. [수신 계약](../desk-receiver.md)을 따른다.
 - DUR는 공식 참조 자료의 요청별 조회 결과이며 환자 정보를 담은 새 DB 표를 만들지 않는다. 구조화 결과는 지정한 출력 파일에만 저장할 수 있다.
 
 위 대응은 논리 엔티티의 식별자이며 SQL DDL이 아니다. 기존 v2→v3 이관은 약 ID·복용 기록·캘린더 event ID를 유지하고 변환 전 JSON을 state/backups에 보존한다.
