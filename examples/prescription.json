@@ -1,0 +1,16 @@
+{
+  "startDate": "2026-11-01",
+  "confirmedAt": "2026-11-01T13:00:00+09:00",
+  "items": [
+    {
+      "readNo": 1,
+      "itemSeq": "100001",
+      "name": "합성정60밀리그램",
+      "dosePerTime": 1,
+      "dailyCount": 2,
+      "dosePeriods": null,
+      "durationDays": 5,
+      "timing": "식후 30분"
+    }
+  ]
+}

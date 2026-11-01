@@ -1,0 +1,16 @@
+{
+  "readable": true,
+  "medicines": [
+    {
+      "readNo": 1,
+      "readName": "합성정60밀리그램",
+      "readMaker": "가상제약",
+      "dosePerTime": 1,
+      "dailyCount": 2,
+      "durationDays": 5,
+      "dosePeriods": null,
+      "timing": "식후 30분",
+      "doseRawText": "1일 2회 5일분"
+    }
+  ]
+}
