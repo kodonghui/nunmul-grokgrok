@@ -16,6 +16,7 @@
 - 레포는 공개해도 되게 만든다(비밀값·개인정보 없음). Bot Marketplace에 봇 템플릿으로 올리면 다른 사람 봇이 이 레포를 받아 쓴다.
 - 로컬(윈도우)에서는 py 또는 python으로 돌려도 된다. 경로는 pathlib로 다루고 파일은 UTF-8로 읽고 쓴다.
 - 한국 노트북 조회 중계는 1절의 선택 연결 방식이다. `PUBLIC_DATA_RELAY_URL`·`PUBLIC_DATA_RELAY_TOKEN`이 있으면 별도 인증으로 조회만 중계하며 공식 서비스 키는 노트북에 둔다. 중계 설정이 불완전하면 직접 조회로 몰래 전환하지 않는다. 중계 계약은 `docs/rx-relay.md`와 `api/relay.openapi.json`을 먼저 따른다. 4절 책상 친구와는 별개다.
+- 사용자가 승인한 책상 버튼의 백엔드 수신은 `tools/desk_event.py`와 `docs/desk-receiver.md`를 따른다. 장치 소스는 별도 desk worktree에서만 수정한다. 수신 CLI는 기존 v3 원장 안에서 프로필·회차·일정 버전·중복을 검증하며 HTTP 접수와 실제 기록 결과를 구분한다.
 
 ## 데이터 모양
 누적형 내 약의 원장은 `state/medication_store.json`이다. 현행은 가족별 v2 하위 원장을 포함하는 schemaVersion=3이다. 상세 계약은 [docs/family-v3.md](docs/family-v3.md)를 먼저 따른다. [docs/my-meds-v2.md](docs/my-meds-v2.md)의 약·복용 규칙과 순수 함수는 하위 원장/호환 기준으로 유지한다. `profiles.py`, `my_meds.py`, `intake.py`, `dur_lookup.py`를 사용한다. 프로필이 여러 개면 수정·복용 확인에는 프로필을 명시한다.
