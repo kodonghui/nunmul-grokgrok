@@ -48,6 +48,7 @@
 - 재방문일은 약별 종료일 − 3일이며, 일정 확정 때 이미 지났으면 그날로 고정한다. 새로운 긴 일정 때문에 다른 약의 재방문일을 옮기지 않는다. 같은 날짜의 재방문 알림/일정은 한 건으로 묶는다.
 - `calendar-plan`은 `UPSERT`/`DELETE`, `key`, `fingerprint`, 알고 있는 `eventId`, 일정 내용을 반환한다.
 - 한 약을 중단해도 같은 시각에 다른 약이 남으면 UPSERT한다. 남는 약이 없고 이미 반영한 미래 일정이면 DELETE한다. 과거에 반영된 일정은 보존한다.
+- 생성 응답이 끊겨 아직 ack하지 못한 일정도 취소 시 DELETE로 남긴다. eventId가 null이면 설명의 key로 찾아 삭제하고, 해당 캘린더에 없음이 확인된 경우에도 DELETE ack할 수 있다. 반영 중에는 약 목록 변경과 동기화를 순서대로 실행한다.
 - Grok Bot은 ‘눈물이 테스트’ 캘린더에서 eventId 또는 설명의 key로 기존 일정을 확인해 반영한다. 생성 응답이 끊겨도 같은 key로 확인하고 중복 생성하지 않는다.
 - 반영 성공 뒤 `calendar-ack <key> --fingerprint <값> --event-id <값>`을 실행한다. DELETE ack에는 event ID가 필요 없다. 같은 ack의 반복은 무해하다.
 - 실패한 작업은 남긴다. 현재 작업과 fingerprint가 다르면 `STALE_CALENDAR_CHANGE`로 거부한다. 제목만 바꾸고 삭제 성공으로 ack하지 않는다. Python은 캘린더·채팅·외부 API를 호출하지 않는다.
@@ -60,6 +61,7 @@
 - v1 복용 기록이 있으면 처방과 일정의 confirmedAt·회차·표시 문구가 일치해야 이관한다. 다르면 `MIGRATION_CONFLICT`로 멈추고 추측하지 않는다. 알 수 없는 옛 기록을 새 약에 붙이지 않는다.
 - 확인 가능한 v1 회차의 TAKEN·SKIPPED·MISSED·sentStep을 약별 기록으로 옮긴다. v1 재방문 sentStep도 보존한다.
 - 기존 캘린더 event ID는 알 수 없으므로 key로 찾아 UPSERT 후 ack한다. 자동 루틴·새 서비스·책상 친구는 설치하지 않는다.
+- 일정 조회 결과의 출력 경로를 누적 원장 경로와 같게 지정할 수 없다. 조회 결과로 원장을 덮어쓰지 않는다.
 
 ## 검증 기준
 

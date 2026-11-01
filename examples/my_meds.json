@@ -1,0 +1,25 @@
+{
+  "requestId": "synthetic-demo-20261101-1",
+  "items": [
+    {
+      "itemSeq": "900000001",
+      "name": "가상약A정",
+      "dosePerTime": 1,
+      "timing": "식후 30분",
+      "startDate": "2026-11-01",
+      "durationDays": 5,
+      "doseTimes": ["07:00", "17:00"],
+      "confirmedAt": "2026-11-01T13:00:00+09:00"
+    },
+    {
+      "itemSeq": "900000002",
+      "name": "가상약B정",
+      "dosePerTime": 0.5,
+      "timing": null,
+      "startDate": "2026-11-02",
+      "durationDays": 3,
+      "doseTimes": ["17:00"],
+      "confirmedAt": "2026-11-01T13:00:00+09:00"
+    }
+  ]
+}

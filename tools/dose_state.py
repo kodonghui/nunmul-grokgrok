@@ -10,35 +10,13 @@ else:
     from common import (JsonArgumentParser, SEOUL, ToolError, atomic_write_json,
                         iso, parse_date, parse_instant, read_json, run_cli, state_lock)
 
+if __package__:
+    from .dose_rules import VOICE_PATH, is_quiet, phase_at, validate_voice as _voice
+else:
+    from dose_rules import VOICE_PATH, is_quiet, phase_at, validate_voice as _voice
 
-VOICE_PATH = Path(__file__).resolve().parents[1] / "config/voice.json"
+
 STATES = {"PENDING", "TAKEN", "MISSED", "SKIPPED"}
-
-
-def phase_at(scheduled_at, now):
-    """Reusable pure phase calculation: 0, 1, 2, 3 or 'MISSED'."""
-    seconds = (now - scheduled_at).total_seconds()
-    if seconds < 0:
-        return 0
-    if seconds < 600:
-        return 1
-    if seconds < 1800:
-        return 2
-    if seconds < 5400:
-        return 3
-    return "MISSED"
-
-
-def is_quiet(at):
-    hour = at.astimezone(SEOUL).hour
-    return hour >= 23 or hour < 7
-
-
-def _voice(voice):
-    required = ("step1", "step2", "step3", "taken", "missed", "revisit")
-    if not isinstance(voice, dict) or any(not isinstance(voice.get(k), str) or not voice[k] for k in required):
-        raise ToolError("INVALID_VOICE", "config/voice.json의 말투를 확인해 주세요.")
-    return voice
 
 
 def _initialize(schedule, doses):
@@ -148,8 +126,10 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     for command in ("due", "mark", "skip"):
         sub = commands.add_parser(command)
-        sub.add_argument("--schedule", type=Path, default=Path("state/schedule.json"))
-        sub.add_argument("--doses", type=Path, default=Path("state/doses.json"))
+        sub.add_argument("--schedule", type=Path)
+        sub.add_argument("--doses", type=Path)
+        sub.add_argument("--store", type=Path)
+        sub.add_argument("--medicine-id", action="append", default=[])
         if command == "due":
             sub.add_argument("--now", required=True)
         else:
@@ -158,8 +138,29 @@ def main(argv=None):
         if command == "mark":
             sub.add_argument("--source", required=True, choices=("chat", "desk"))
     args = parser.parse_args(argv)
+    if args.command == "due" and args.medicine_id:
+        parser.error("--medicine-id는 mark와 skip에서 사용해 주세요.")
     value = args.now if args.command == "due" else args.at
     now = parse_instant(value, "now" if args.command == "due" else "at") if value is not None else datetime.now(SEOUL)
+    if args.store is not None and (args.schedule is not None or args.doses is not None):
+        parser.error("--store와 v1 상태 파일을 함께 지정할 수 없습니다.")
+    use_store = args.store is not None or (args.schedule is None and args.doses is None)
+    if use_store:
+        if __package__:
+            from .med_store import DEFAULT_STORE, store_due, store_mark, transact
+        else:
+            from med_store import DEFAULT_STORE, store_due, store_mark, transact
+        def action(store):
+            if args.command == "due":
+                return store_due(store, now, read_json(VOICE_PATH))
+            return store_mark(store, now, source=args.source if args.command == "mark" else None,
+                              key=args.key, medicine_ids=args.medicine_id, skip=args.command == "skip",
+                              voice=read_json(VOICE_PATH) if args.command == "mark" else None)
+        return transact(args.store or DEFAULT_STORE, action, now)
+    if args.medicine_id:
+        parser.error("--medicine-id는 누적 원장 모드에서 사용해 주세요.")
+    args.schedule = args.schedule or Path("state/schedule.json")
+    args.doses = args.doses or Path("state/doses.json")
     doses_path = args.doses.resolve()
     with state_lock(doses_path):
         schedule = read_json(args.schedule)

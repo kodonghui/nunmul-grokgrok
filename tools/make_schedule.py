@@ -127,11 +127,26 @@ def build_schedule(prescription, slots=None, today=None):
 
 def main(argv=None):
     parser = JsonArgumentParser(description=__doc__)
-    parser.add_argument("--in", dest="input", required=True, type=Path)
+    parser.add_argument("--in", dest="input", type=Path)
+    parser.add_argument("--store", type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--slots", type=Path)
     parser.add_argument("--today")
     args = parser.parse_args(argv)
+    if (args.input is None) == (args.store is None):
+        parser.error("--in 또는 --store 중 하나를 지정해 주세요.")
+    if args.store is not None:
+        if args.slots is not None or args.today is not None:
+            parser.error("원장의 일정은 my_meds.py로 변경해 주세요.")
+        if args.store.resolve() == args.out.resolve():
+            parser.error("조회 결과의 출력 경로와 원장 경로는 달라야 합니다.")
+        if __package__:
+            from .med_store import build_store_schedule, transact
+        else:
+            from med_store import build_store_schedule, transact
+        schedule = transact(args.store, build_store_schedule, include_changes=False)
+        atomic_write_json(args.out, schedule)
+        return schedule
     slots_path = args.slots
     if slots_path is None and Path("state/slots.json").is_file():
         slots_path = Path("state/slots.json")

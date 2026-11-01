@@ -1,0 +1,7 @@
+{
+  "startDate": "2026-11-01",
+  "durationDays": 5,
+  "doseTimes": ["08:30", "18:30"],
+  "dosePerTime": 1,
+  "timing": "사용자가 확인한 표시 문구"
+}
