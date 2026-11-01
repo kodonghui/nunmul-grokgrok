@@ -1,0 +1,10 @@
+{
+  "response": {
+    "header": {"resultCode": "00"},
+    "body": {"items": {"item": [
+      {"ITEM_SEQ": "100001", "ITEM_NAME": "합성정60밀리그램", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+      {"ITEM_SEQ": "invalid", "ITEM_NAME": "합성정60밀리그램", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품"},
+      {"ITEM_SEQ": "100099", "ITEM_NAME": "합성정60밀리그램", "ENTP_NAME": null, "ETC_OTC_NAME": "일반의약품"}
+    ]}, "totalCount": 3}
+  }
+}

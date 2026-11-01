@@ -1,0 +1,10 @@
+{
+  "header": {"resultCode": "00"},
+  "body": {"items": {"item": {
+    "itemSeq": "100001", "itemName": "합성정60밀리그램",
+    "efcyQesitm": "합성 시험용 설명입니다. 실제 의약품 안내가 아닙니다.",
+    "useMethodQesitm": null, "atpnWarnQesitm": null, "atpnQesitm": null,
+    "intrcQesitm": null, "seQesitm": null, "depositMethodQesitm": null,
+    "updateDe": "2026-11-01"
+  }}, "totalCount": 1}
+}

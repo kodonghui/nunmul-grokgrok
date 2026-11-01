@@ -1,0 +1,22 @@
+{
+  "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE"},
+  "body": {"items": [
+    {"ITEM_SEQ": "100001", "ITEM_NAME": "합성정60밀리그램", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100002", "ITEM_NAME": "합성정60mg", "ENTP_NAME": "다른가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100003", "ITEM_NAME": "합성정60mg(합성성분)", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100004", "ITEM_NAME": "합성정600밀리그램", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100005", "ITEM_NAME": "합성정6밀리그램", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100006", "ITEM_NAME": "합성서방정60밀리그램", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100007", "ITEM_NAME": "합성장용정60mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100008", "ITEM_NAME": "합성캡슐60mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100009", "ITEM_NAME": "합성정60mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "취하"},
+    {"ITEM_SEQ": "100010", "ITEM_NAME": "미세정0.5mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "전문의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100011", "ITEM_NAME": "미세정500마이크로그램", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "전문의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100012", "ITEM_NAME": "미세정5mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "전문의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100013", "ITEM_NAME": "듀비메트서방정0.5/10mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "전문의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100014", "ITEM_NAME": "듀비메트서방정0.5/100mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "전문의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100015", "ITEM_NAME": "듀비메트서방정10/0.5mg", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "전문의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100016", "ITEM_NAME": "가상액5mg/mL", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"},
+    {"ITEM_SEQ": "100017", "ITEM_NAME": "가상액50mg/mL", "ENTP_NAME": "가상제약", "ETC_OTC_NAME": "일반의약품", "CANCEL_NAME": "정상"}
+  ], "totalCount": 17}
+}
