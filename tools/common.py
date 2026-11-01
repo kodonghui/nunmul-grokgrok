@@ -1,6 +1,7 @@
 """JSON, validation and Korean time shared by the command-line tools."""
 
 import argparse
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 import json
 import os
@@ -8,6 +9,7 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+import time
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
@@ -95,7 +97,53 @@ def atomic_write_json(path, value):
         raise ToolError("WRITE_FAILED", "결과 파일을 저장할 수 없습니다.") from None
     finally:
         if temporary is not None:
-            temporary.unlink(missing_ok=True)
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+@contextmanager
+def state_lock(path, timeout=2):
+    """Lock a read/modify/replace transaction; OS locks are released on exit."""
+    lock_path = Path(str(Path(path).resolve()) + ".lock")
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        stream = lock_path.open("a+b")
+    except OSError:
+        raise ToolError("WRITE_FAILED", "상태 파일 잠금을 준비할 수 없습니다.") from None
+    acquired = False
+    try:
+        stream.seek(0, os.SEEK_END)
+        if stream.tell() == 0:
+            stream.write(b"\0")
+            stream.flush()
+        deadline = time.monotonic() + timeout
+        while not acquired:
+            try:
+                stream.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise ToolError("STATE_BUSY", "다른 명령이 복용 기록을 처리 중입니다.") from None
+                time.sleep(0.05)
+        yield
+    finally:
+        if acquired:
+            if os.name == "nt":
+                import msvcrt
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        stream.close()
 
 
 def run_cli(main):
@@ -106,6 +154,9 @@ def run_cli(main):
         code = 0
     except ToolError as error:
         result = {"error": {"code": error.code, "message": error.message}}
+        code = 1
+    except OSError:
+        result = {"error": {"code": "IO_ERROR", "message": "파일 작업을 완료할 수 없습니다."}}
         code = 1
     print(json.dumps(result, ensure_ascii=False, allow_nan=False))
     return code
