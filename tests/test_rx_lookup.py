@@ -162,6 +162,22 @@ class CandidateTests(OfflineTest):
         self.assertEqual(card["error"]["code"], "INVALID_ROWS")
         self.assertEqual(opener.open.call_count, 1)
 
+    def test_actual_response_classification_field_and_legacy_alias_are_supported(self):
+        card, _ = self.card("가상연동정200밀리그램", raw=(FIXTURES / "permit_code_field.json").read_bytes())
+        self.assertEqual(card["status"], "OK")
+        self.assertEqual(card["candidates"][0]["etcOtc"], "일반의약품")
+        self.assertEqual(card["candidates"][0]["itemSeq"], "900000101")
+
+    def test_conflicting_or_unknown_classification_is_not_silently_accepted(self):
+        seed = read_json(FIXTURES / "permit_code_field.json")
+        for fields in ({"ETC_OTC_NAME": "전문의약품"}, {"ETC_OTC_CODE": "확인불가"},
+                       {"ETC_OTC_CODE": None}):
+            value = deepcopy(seed)
+            value["body"]["items"][0].update(fields)
+            card, _ = self.card("가상연동정200밀리그램", raw=json.dumps(value).encode())
+            self.assertEqual(card["status"], "FAILED")
+            self.assertEqual(card["error"]["code"], "INVALID_ROWS")
+
     def test_each_required_official_field_is_validated(self):
         template = read_json(FIXTURES / "permit_catalog.json")["body"]["items"][0]
         for field in ("ITEM_SEQ", "ITEM_NAME", "ENTP_NAME", "ETC_OTC_NAME"):
@@ -324,7 +340,8 @@ class TransportTests(OfflineTest):
 
     def test_explicit_environment_does_not_open_env_file(self):
         with patch("pathlib.Path.open", side_effect=AssertionError("Must not read a real .env")):
-            load_env(ROOT, {"PUBLIC_DATA_SERVICE_KEY": "", "PUBLIC_DATA_BASE_URL": "https://apis.data.go.kr"})
+            load_env(ROOT, {"PUBLIC_DATA_SERVICE_KEY": "", "PUBLIC_DATA_BASE_URL": "https://apis.data.go.kr",
+                            "PUBLIC_DATA_RELAY_URL": "", "PUBLIC_DATA_RELAY_TOKEN": ""})
 
     def test_no_key_cli_is_offline_and_emits_one_json(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -332,7 +349,8 @@ class TransportTests(OfflineTest):
             source, target = root / "input.json", root / "output.json"
             source.write_text(json.dumps(data("합성정60mg")), encoding="utf-8")
             environ = os.environ.copy()
-            environ.update(PUBLIC_DATA_SERVICE_KEY="", PUBLIC_DATA_BASE_URL="https://apis.data.go.kr")
+            environ.update(PUBLIC_DATA_SERVICE_KEY="", PUBLIC_DATA_BASE_URL="https://apis.data.go.kr",
+                           PUBLIC_DATA_RELAY_URL="", PUBLIC_DATA_RELAY_TOKEN="")
             process = subprocess.run([sys.executable, str(ROOT / "tools/rx_lookup.py"),
                                       "--in", str(source), "--out", str(target)], env=environ,
                                      capture_output=True, text=True, encoding="utf-8", timeout=10)

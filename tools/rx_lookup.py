@@ -127,7 +127,7 @@ class NameClue:
 
 
 def load_env(root, environ):
-    allowed = {"PUBLIC_DATA_SERVICE_KEY", "PUBLIC_DATA_BASE_URL"}
+    allowed = {"PUBLIC_DATA_SERVICE_KEY", "PUBLIC_DATA_BASE_URL", "PUBLIC_DATA_RELAY_URL", "PUBLIC_DATA_RELAY_TOKEN"}
     if allowed.issubset(environ):
         return
     path = Path(root) / ".env"
@@ -212,9 +212,12 @@ class PublicDataClient:
             _HTTPHandler(), _HTTPSHandler(), _NoRedirect())
         self.sleep = sleeper if sleeper is not None else time.sleep
 
-    def get(self, path, parameters):
+    def require_credentials(self):
         if not self.key:
             raise ToolError("NO_KEY", "PUBLIC_DATA_SERVICE_KEY가 없습니다.")
+
+    def get(self, path, parameters):
+        self.require_credentials()
         try:
             base = urllib.parse.urlsplit(self.base)
             port = base.port
@@ -249,13 +252,19 @@ def candidate(row):
     if not isinstance(row, dict):
         return None
     code = str(row.get("ITEM_SEQ", "")).strip()
-    name, maker, kind = (row.get(field) for field in ("ITEM_NAME", "ENTP_NAME", "ETC_OTC_NAME"))
+    name, maker = (row.get(field) for field in ("ITEM_NAME", "ENTP_NAME"))
+    kinds = [row.get(field) for field in ("ETC_OTC_NAME", "ETC_OTC_CODE")
+             if row.get(field) is not None and row.get(field) != ""]
+    if not kinds or any(kind not in ("일반의약품", "전문의약품", "일반", "전문") for kind in kinds):
+        return None
+    normalized_kinds = {kind if kind.endswith("의약품") else kind + "의약품" for kind in kinds}
+    if len(normalized_kinds) != 1:
+        return None
+    kind = normalized_kinds.pop()
     if (not re.fullmatch(r"[0-9]+", code) or not isinstance(name, str) or not name.strip()
             or not isinstance(maker, str) or not maker.strip()
             or kind not in ("일반의약품", "전문의약품", "일반", "전문")):
         return None
-    if kind in ("일반", "전문"):
-        kind += "의약품"
     return {"itemSeq": code, "itemName": name.strip(), "entpName": maker.strip(),
             "etcOtc": kind, "cancelled": row.get("CANCEL_NAME") != "정상"}
 
@@ -278,8 +287,10 @@ def lookup(data, client):
         card = {"readNo": medicine["readNo"], "readName": medicine.get("readName"),
                 "status": "NOT_FOUND", "queries": [], "excludedCount": 0, "candidates": []}
         cards.append(card)
-        if not client.key:
-            _failed(card, ToolError("NO_KEY", "PUBLIC_DATA_SERVICE_KEY가 없습니다."))
+        try:
+            client.require_credentials()
+        except ToolError as error:
+            _failed(card, error)
             continue
         clue = NameClue(medicine.get("readName"))
         if not data["readable"] or not clue.queryable:
@@ -355,7 +366,14 @@ def main(argv=None):
     if args.explain is not None and (args.input is not None or args.out is not None):
         parser.error("--explain과 파일 조회는 따로 실행해 주세요.")
     load_env(ROOT, os.environ)
-    client = PublicDataClient()
+    if os.environ.get("PUBLIC_DATA_RELAY_URL") or os.environ.get("PUBLIC_DATA_RELAY_TOKEN"):
+        if __package__:
+            from .rx_relay import RelayClient
+        else:
+            from rx_relay import RelayClient
+        client = RelayClient()
+    else:
+        client = PublicDataClient()
     if args.explain is not None:
         return explain(args.explain, client)
     result = lookup(read_json(args.input), client)

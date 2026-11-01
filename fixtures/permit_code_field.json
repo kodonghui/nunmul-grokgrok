@@ -1,0 +1,15 @@
+{
+  "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
+  "body": {
+    "items": [
+      {
+        "ITEM_SEQ": "900000101",
+        "ITEM_NAME": "가상연동정200밀리그람(가상성분)",
+        "ENTP_NAME": "가상연동제약",
+        "ETC_OTC_CODE": "일반의약품",
+        "CANCEL_NAME": "정상",
+        "CHANGE_DATE": "20261101"
+      }
+    ]
+  }
+}
