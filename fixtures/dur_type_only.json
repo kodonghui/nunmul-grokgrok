@@ -1,0 +1,19 @@
+{
+  "response": {
+    "header": {"resultCode": "00"},
+    "body": {
+      "items": [{
+        "ITEM_SEQ": "900003",
+        "TYPE_NAME": "임부금기",
+        "INGR_NAME": "가상성분",
+        "PROHBT_CONTENT": null,
+        "REMARK": null,
+        "CHANGE_DATE": "20251001",
+        "NOTIFICATION_DATE": "20190101"
+      }],
+      "totalCount": 1,
+      "pageNo": 1,
+      "numOfRows": 100
+    }
+  }
+}

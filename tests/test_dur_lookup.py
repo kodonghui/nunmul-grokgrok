@@ -173,6 +173,72 @@ class DurTests(unittest.TestCase):
         result = collect("900001", "INTERACTION", client, NOW)
         self.assertEqual(result["rows"][0]["content"], "")
 
+    def test_official_type_only_row_preserves_classification_date_and_unknown_warning(self):
+        response = (ROOT / "fixtures/dur_type_only.json").read_bytes()
+        normalized = validate_page(parse_response(response, include_pagination=True), 1)
+        rows = normalized["items"]
+        items = [{"itemSeq": "900003", "name": "가상C정"}]
+        for kind, label in (("PREGNANCY", "임부금기"), ("AGE", "연령금기"), ("ELDERLY", "노인주의")):
+            with self.subTest(kind=kind):
+                catalog = {kind: [{**rows[0], "TYPE_NAME": label}]}
+                result = check(items, {}, self.client(catalog), NOW)
+                self.assertEqual(result["lookup"], "ALL")
+                self.assertEqual(result["result"], "UNKNOWN")
+                warning = result["warnings"][0]
+                self.assertEqual(warning["detailStatus"], "TYPE_ONLY")
+                self.assertEqual(warning["match"], "UNKNOWN")
+                self.assertIsNone(warning["content"])
+                self.assertIn("상세", warning["note"])
+                self.assertEqual(warning["ingredient"], "가상성분")
+                self.assertEqual(warning["updatedAt"], "2025-10-01")
+                source = next(s for s in result["sources"] if s["type"] == kind)
+                self.assertEqual(source["missingDetailCount"], 1)
+                self.assertEqual(source["updatedAt"], "2025-10-01")
+
+    def test_type_only_row_never_fills_detail_or_confirms_even_with_known_condition(self):
+        row = {"ITEM_SEQ": "900001", "TYPE_NAME": "임부금기", "INGR_NAME": "가상성분"}
+        for blank in (None, "", "  ", "<p> </p>"):
+            result = check([ITEMS[0]], clinical(pregnant=True), self.client({"PREGNANCY": [{**row, "PROHBT_CONTENT": blank}]}), NOW)
+            self.assertEqual(result["result"], "UNKNOWN")
+            self.assertIsNone(result["warnings"][0]["content"])
+            self.assertIsNone(result["warnings"][0]["updatedAt"])
+
+    def test_distinct_type_only_ingredients_are_not_hidden_by_warning_deduplication(self):
+        row = {"ITEM_SEQ": "900001", "TYPE_NAME": "임부금기", "PROHBT_CONTENT": None}
+        catalog = {"PREGNANCY": [{**row, "INGR_NAME": "가상성분A"}, {**row, "INGR_NAME": "가상성분B"}]}
+        result = check([ITEMS[0]], {}, self.client(catalog), NOW)
+        self.assertEqual(result["result"], "UNKNOWN")
+        self.assertEqual({warning["ingredient"] for warning in result["warnings"]}, {"가상성분A", "가상성분B"})
+        source = next(s for s in result["sources"] if s["type"] == "PREGNANCY")
+        self.assertEqual(source["missingDetailCount"], 2)
+
+    def test_type_only_exception_does_not_accept_wrong_type_code_missing_identity_or_bad_text(self):
+        row = {"ITEM_SEQ": "900001", "TYPE_NAME": "임부금기", "INGR_NAME": "가상성분", "PROHBT_CONTENT": None}
+        for invalid in ({**row, "TYPE_NAME": "연령금기"}, {**row, "TYPE_NAME": None}, {**row, "ITEM_SEQ": "900002"},
+                        {**row, "INGR_NAME": None}, {**row, "PROHBT_CONTENT": 2}):
+            client = self.client({})
+            normal = client.get_page.side_effect
+            client.get_page.side_effect = lambda endpoint, params: page([invalid]) if endpoint == DUR_PATHS["PREGNANCY"] else normal(endpoint, params)
+            result = check([ITEMS[0]], clinical(pregnant=True), client, NOW)
+            self.assertEqual(result["lookup"], "PARTIAL")
+            self.assertEqual(result["result"], "UNKNOWN")
+            failure = next(s for s in result["sources"] if s["type"] == "PREGNANCY")
+            self.assertEqual(failure["error"]["code"], "INVALID_DUR_ROW")
+
+    def test_relay_preserves_type_only_row_for_client_validation(self):
+        row = {"ITEM_SEQ": "900001", "TYPE_NAME": "임부금기", "INGR_NAME": "가상성분", "PROHBT_CONTENT": None, "CHANGE_DATE": "20251001"}
+        upstream = Mock()
+        upstream.get_page.return_value = page([row])
+        payload = {"operation": "dur", "type": "PREGNANCY", "itemSeq": "900001", "pageNo": 1}
+        relayed = query_upstream(payload, upstream)
+        transport = self.client({})
+        original = transport.get_page.side_effect
+        transport.get_page.side_effect = lambda endpoint, params: relayed if endpoint == DUR_PATHS["PREGNANCY"] else original(endpoint, params)
+        result = check([ITEMS[0]], {}, transport, NOW)
+        self.assertEqual(result["lookup"], "ALL")
+        self.assertEqual(result["result"], "UNKNOWN")
+        self.assertEqual(result["warnings"][0]["updatedAt"], "2025-10-01")
+
     def test_direct_response_pagination_normalizes_all_supported_item_shapes(self):
         row = {"ITEM_SEQ":"900001", "PROHBT_CONTENT":"합성"}
         for items in ([row], {"item":[row]}, {"item":row}):

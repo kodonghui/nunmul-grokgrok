@@ -34,3 +34,15 @@ Windows Python3.13.15, `py -m unittest`: **193개, 11.490초, 전부 통과**. �
 - 실제 마이크 음성 인식/자연어 해석과 Google Calendar 생성·변경·취소. Python 구조화 입력 테스트가 이를 대신하지 않는다.
 - 실제 ‘울보 순찰’ 실행 주기·다음 실행·채팅 전달. due는 결과 반환 때 발송 단계를 기록하며 외부 메시지 전송 성공까지 추적하는 큐는 없다.
 - Grok의 DUR 중계 경유 결과. 사용자가 전달한 14:07의 원격 성공 보고는 이전 permit/explain에 해당한다.
+
+## 후속 · 공식 분류만 있는 DUR 행 처리 수정
+
+사용자가 전달한 14:50 Grok 보고: efe7d47/193개 통과, 빈 v3 원장·스킬 갱신, 07:00~22:55 5분 순찰 생성. 중계에서 타이레놀/게보린 8요청 중 게보린 임부1건이 INVALID_DUR_ROW, PARTIAL/UNKNOWN이었다. 이는 사용자 전달 보고이며 실제 순찰 첫 실행·마이크·Google Calendar 변경은 아직 직접 검증하지 않았다.
+
+- 재현: 노트북에서 공개 품목197900277의 임부 API는 TYPE_NAME=임부금기, 성분명, CHANGE_DATE=20251110을 반환했으나 PROHBT_CONTENT와 REMARK는 null이었다. 기존 검증은 이를 잘못된 행으로 거부하면서 확인 가능한 분류와 날짜도 결과에서 잃었다.
+- SPEC-DUR-002를 선커밋으로 정의했다. 정확한 품목·공식 유형·성분이 있는 연령/노인/임부 행의 빈 상세는 TYPE_ONLY로 보존하고 상세 미제공 note, content=null, match=UNKNOWN을 낸다. 잘못된 품목/유형/필드와 식별할 수 없는 빈 행은 계속 오류다. 공식 웹페이지 값을 API 상세로 자동 채우지 않는다.
+- TC-DUR-003: 합성 fixtures/dur_type_only.json으로 null/공백/HTML 빈 내용, 공식 날짜 보존·미제공 날짜 null 유지, 조건이 확인돼도 내용 추정 금지, 잘못된 행 거부, relay 필드 보존, 상세 없는 서로 다른 성분을 경고 중복 제거로 숨기지 않는 것을 검사했다. 수정 전 회귀 실패를 재현한 뒤 DUR24개를 모두 통과했다.
+- 전체 `py -m unittest`: **198개, 13.236초, 전부 통과**. 테스트는 가짜 HTTP·합성 fixture이며 네트워크와 실제 키를 쓰지 않았다.
+- 별도 실제 HTTPS 중계 재조회: 공개 품목202106092·197900277의 8요청 모두 OK, lookup=ALL/checkedCount=8/expectedCount=8, result=UNKNOWN. 게보린 임부1건은 TYPE_ONLY/missingDetailCount=1/공식 갱신일2025-11-10을 유지했다. 이를 NONE이나 복용 안전 판정으로 바꾸지 않는다. 나머지 정상 빈 응답의 갱신일은 null이다.
+- 이번 수정은 dur_lookup 클라이언트 해석에 한정된다. 기존 중계 프로세스·주소·토큰 변경은 필요 없다. 실제 원장·Calendar·루틴·.env는 변경하지 않았다. 기존 사용자 .env.example/.idea/assets 변경은 보존했다.
+- 남은 인계: Grok에서 최신 main 업데이트와198개 테스트, 같은 격리 조회 재확인, 방문1일 전 알림 합성 검사와 순찰 첫 실제 실행 기록 확인. [후속 복붙 지시문](grok-bot-v3-dur-followup.md)을 사용한다.

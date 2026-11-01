@@ -64,6 +64,8 @@ Grok의 음성/텍스트 해석 → `intake.py propose` → 실제 동의 또는
 
 결과의 `lookup`은 `ALL/PARTIAL/FAILED/NO_DRUG`, `result`는 `FOUND/NONE/UNKNOWN`입니다. 출처·조회 시각·유형별 공식 갱신일을 함께 냅니다. 부분 실패·전체 실패·미확인을 ‘금기 없음’으로 바꾸지 않습니다. `NONE`도 확인한 범위의 미발견이며 복용 가능·안전을 보장하지 않습니다. e약은요 설명은 DUR 검사를 대신하지 않습니다.
 
+공식 연령/노인/임부 유형과 성분이 확인돼도 API의 상세 내용이 비어 있을 수 있습니다. 이 경우 `detailStatus=TYPE_ONLY`, `content=null`, `match=UNKNOWN` 경고와 상세 미제공 `note`를 반환하고 성분·공식 갱신일을 보존합니다. 출처의 `missingDetailCount`로 구분합니다. `lookup=ALL`은 모든 요청/페이지의 조회 완료를 뜻하며 상세 충족이나 안전 판정은 아닙니다. 성분도 없는 빈 행·다른 품목·유형·잘못된 내용 필드는 오류로 유지합니다.
+
 ## Grok Bot과 도구의 역할
 
 1. 봇이 대상 프로필을 확인하고 가상 사진·음성·텍스트에서 읽은 값을 `state/rx_read.json`으로 준비합니다. 못 읽은 칸은 `null`로 두고 개인정보는 쓰지 않습니다.

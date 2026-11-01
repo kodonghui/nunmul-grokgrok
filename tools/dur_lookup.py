@@ -43,7 +43,9 @@ def _row(raw, code, kind):
     if label and label not in aliases:
         raise ToolError("INVALID_DUR_ROW", "DUR 유형이 요청과 다릅니다.")
     content, partner = _text(raw, "PROHBT_CONTENT"), _text(raw, "MIXTURE_ITEM_SEQ")
-    if not content and (kind != "INTERACTION" or partner):
+    ingredient = _text(raw, "INGR_KOR_NAME") or _text(raw, "INGR_NAME")
+    type_only = not content and kind != "INTERACTION" and label in aliases and bool(ingredient)
+    if not content and (kind != "INTERACTION" or partner) and not type_only:
         raise ToolError("INVALID_DUR_ROW", "DUR 금기·주의 내용이 없습니다.")
     if kind == "INTERACTION" and content and not re.fullmatch(r"[0-9]{1,20}", partner):
         raise ToolError("INVALID_DUR_ROW", "병용 상대 품목코드를 확인할 수 없습니다.")
@@ -53,7 +55,8 @@ def _row(raw, code, kind):
             updated = updated[:4] + "-" + updated[4:6] + "-" + updated[6:]
         updated = parse_date(updated, "DUR.updateDate").isoformat()
     return {"partnerItemSeq": partner or None, "content": content, "updatedAt": updated or None,
-            "ingredient": _text(raw, "INGR_KOR_NAME") or _text(raw, "INGR_NAME")}
+            "ingredient": ingredient,
+            "detailStatus": "TYPE_ONLY" if type_only else "PROVIDED" if content else "EMPTY_INTERACTION"}
 
 
 def collect(code, kind, client, now):
@@ -76,6 +79,7 @@ def collect(code, kind, client, now):
             break
     dates = [r["updatedAt"] for r in rows if r["updatedAt"] is not None]
     return {"itemSeq": code, "type": kind, "status": "OK", "totalCount": total, "rows": rows,
+            "missingDetailCount": sum(row["detailStatus"] == "TYPE_ONLY" for row in rows),
             "source": SOURCE, "updatedAt": min(dates) if dates else None, "checkedAt": iso(now)}
 
 
@@ -145,7 +149,7 @@ def check(items, clinical, client, now, profile_id=None, profile_alias=None):
                 continue
             lookups.append(evidence)
             for row in evidence["rows"]:
-                if not row["content"]:
+                if not row["content"] and row["detailStatus"] != "TYPE_ONLY":
                     continue
                 codes, names, match = [code], [item["name"]], "CONFIRMED"
                 if kind == "INTERACTION":
@@ -162,12 +166,19 @@ def check(items, clinical, client, now, profile_id=None, profile_alias=None):
                     match = "UNKNOWN" if conditions["pregnant"] is None else "CONFIRMED" if conditions["pregnant"] else "NO"
                 if match == "NO":
                     continue
-                fingerprint = (kind, tuple(codes), row["content"])
+                if row["detailStatus"] == "TYPE_ONLY":
+                    match = "UNKNOWN"
+                fingerprint = (kind, tuple(codes), row["content"],
+                               row["ingredient"] if row["detailStatus"] == "TYPE_ONLY" else None)
                 if fingerprint in dedupe:
                     continue
                 dedupe.add(fingerprint)
-                warnings.append({"type": kind, "label": DUR_LABELS[kind], "itemSeqs": codes, "names": names,
-                                 "match": match, "content": row["content"], "updatedAt": row["updatedAt"]})
+                warning = {"type": kind, "label": DUR_LABELS[kind], "itemSeqs": codes, "names": names,
+                           "match": match, "content": row["content"] or None, "updatedAt": row["updatedAt"],
+                           "ingredient": row["ingredient"], "detailStatus": row["detailStatus"]}
+                if row["detailStatus"] == "TYPE_ONLY":
+                    warning["note"] = f"공식 {DUR_LABELS[kind]} 분류가 있으나 상세 금기·주의 내용이 제공되지 않았어요."
+                warnings.append(warning)
     success = sum(entry["status"] == "OK" for entry in lookups)
     expected = len(unique) * len(kinds)
     complete = expected > 0 and success == expected and not unidentified
