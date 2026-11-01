@@ -149,9 +149,18 @@ Python 도구는 사진 판독·캘린더 쓰기·채팅 전송을 하지 않습
 
 ## 한국 노트북 조회 중계
 
-그록 환경의 TLS 실패를 피하려면 노트북에서 `py tools/rx_relay.py --port 8765 --token-file state/runtime/relay-token.txt`를 실행하고, 해당 loopback 포트를 임시 HTTPS 터널로 연결합니다. 토큰 파일은 운영 준비 과정에서 별도로 만들며 내용을 출력하지 않습니다. 그록에서는 보안 입력으로 `PUBLIC_DATA_RELAY_URL`과 `PUBLIC_DATA_RELAY_TOKEN`을 설정한 뒤 기존 `rx_lookup.py` 명령을 그대로 사용합니다.
+그록 환경의 TLS 실패를 피하려면 노트북에서 `py tools/rx_relay.py --port 8765 --token-file state/runtime/relay-token.txt`를 실행하고, 해당 loopback 포트를 임시 HTTPS 터널로 연결합니다. 토큰 파일은 운영 준비 과정에서 별도로 만들며 내용을 출력하지 않습니다. 그록에서는 보안 입력으로 `PUBLIC_DATA_RELAY_URL`과 `PUBLIC_DATA_RELAY_TOKEN`을 **같은 실행 환경에** 전달하고, 한 번만 아래 명령으로 한 쌍을 저장합니다.
 
-둘 중 하나라도 설정되면 중계 모드입니다. 토큰 누락·주소 오류·연결 실패 시 직접 조회로 몰래 전환하지 않습니다. 직접 모드로 돌아가려면 두 중계 설정을 모두 비웁니다. 공식 키를 중계 토큰으로 재사용하지 않습니다. 노트북 서버는 공식 약 검색·설명·DUR 네 유형만 허용하고 원장·사진·캘린더·가족 조건은 다루지 않습니다. 명령 한 번에만 환경변수를 설정했다면 다음 명령에도 필요합니다. 연결했다고 가정하지 말고 모든 조회 실행 환경에서 두 중계 변수를 안전하게 전달합니다.
+```sh
+python3 tools/relay_config.py save
+python3 tools/relay_config.py status
+```
+
+주소·토큰은 비공개 `state/runtime/rx-client/connection.json`에만 원자적으로 저장됩니다. `status`는 모드·출처·준비 여부만 보여 줍니다. 이후 이름 검색·`--explain`·DUR 명령이 저장소 루트의 설정을 자동으로 읽으므로 다음 프로세스에 두 환경변수가 없어도 같은 중계를 사용합니다. `.env`와 약 원장은 수정하지 않습니다. 실제 주소나 토큰 변경 때는 두 값을 함께 보안 환경에 제공하고 `python3 tools/relay_config.py save --replace`를 실행합니다. 임시 `rx_env_check.sh`는 사용하지 않습니다. 그록용 전체 인계문은 [중계 설정 전환 프롬프트](docs/grok-bot-relay-setup.md)에 있습니다.
+
+봇에서는 `rx_lookup.py --saved-relay --in ... --out ...`, `rx_lookup.py --saved-relay --explain <itemSeq>`, `dur_lookup.py --saved-relay --profile <ID> ...`처럼 `--saved-relay`를 붙입니다. 컴퓨터 초기화로 설정 디렉터리 전체가 사라져도 저장 설정 없이는 조회하지 않습니다.
+
+저장 설정이 있으면 중계 모드가 고정됩니다. 환경변수 일부와 저장값을 섞지 않으며, 비어 있지 않은 환경변수가 저장값과 다르면 `RELAY_CONFIG_CONFLICT`입니다. 저장 파일 누락·손상·권한 오류·통신 실패 시 직접 조회로 전환하지 않습니다. 설정을 저장하지 않은 새 환경은 기존 환경변수/읽기 전용 `.env` 방식과 두 중계 변수 모두 없을 때의 직접 모드를 유지합니다. 공식 키를 중계 토큰으로 재사용하지 않습니다. 노트북 서버는 공식 약 검색·설명·DUR 네 유형만 허용하고 원장·사진·캘린더·가족 조건은 다루지 않습니다. 컴퓨터 초기화로 `state/`가 지워졌으면 보안 입력 후 다시 설정합니다.
 
 중계는 행사 동안만 켤 수 있으며, 서버와 터널 프로세스를 종료하면 새 공식 조회가 중단됩니다. 저장된 약 목록·복용 기록·캘린더는 유지됩니다. 자동 시작 서비스는 만들지 않습니다. 준비·연결·종료 방법과 실제 검증 범위는 [중계 문서](docs/rx-relay.md), API 계약은 [relay.openapi.json](api/relay.openapi.json)을 따릅니다. 실제 주소·키·토큰은 공개 저장소/템플릿에 넣지 않습니다.
 

@@ -3,6 +3,7 @@ import http.client
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -348,10 +349,12 @@ class TransportTests(OfflineTest):
             root = Path(directory)
             source, target = root / "input.json", root / "output.json"
             source.write_text(json.dumps(data("합성정60mg")), encoding="utf-8")
+            # CLI tests must not read the bot's saved relay token or real .env.
+            shutil.copytree(ROOT / "tools", root / "tools", ignore=shutil.ignore_patterns("__pycache__"))
             environ = os.environ.copy()
             environ.update(PUBLIC_DATA_SERVICE_KEY="", PUBLIC_DATA_BASE_URL="https://apis.data.go.kr",
                            PUBLIC_DATA_RELAY_URL="", PUBLIC_DATA_RELAY_TOKEN="")
-            process = subprocess.run([sys.executable, str(ROOT / "tools/rx_lookup.py"),
+            process = subprocess.run([sys.executable, str(root / "tools/rx_lookup.py"),
                                       "--in", str(source), "--out", str(target)], env=environ,
                                      capture_output=True, text=True, encoding="utf-8", timeout=10)
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)

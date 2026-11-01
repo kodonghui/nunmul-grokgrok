@@ -3,7 +3,6 @@
 from datetime import datetime
 import html
 import json
-import os
 from pathlib import Path
 import re
 
@@ -11,12 +10,12 @@ if __package__:
     from .common import JsonArgumentParser, SEOUL, ToolError, atomic_write_json, iso, parse_date, parse_instant, read_json, run_cli
     from .dur_rules import DUR_FIELDS, DUR_LABELS, DUR_PATHS, validate_page
     from .family_store import DEFAULT_STORE, resolve_profile, transact
-    from .rx_lookup import ROOT, create_client, load_env
+    from .rx_lookup import create_client
 else:
     from common import JsonArgumentParser, SEOUL, ToolError, atomic_write_json, iso, parse_date, parse_instant, read_json, run_cli
     from dur_rules import DUR_FIELDS, DUR_LABELS, DUR_PATHS, validate_page
     from family_store import DEFAULT_STORE, resolve_profile, transact
-    from rx_lookup import ROOT, create_client, load_env
+    from rx_lookup import create_client
 
 
 SOURCE = "식품의약품안전처 의약품안전사용서비스(DUR) 품목정보"
@@ -199,9 +198,11 @@ def main(argv=None):
     parser.add_argument("--in", dest="input", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--now")
+    parser.add_argument("--saved-relay", action="store_true", help="저장한 중계 설정만 사용하고 없으면 중단")
     args = parser.parse_args(argv)
     if args.out and args.out.resolve() == args.store.resolve():
         raise ToolError("INVALID_ARGUMENT", "DUR 결과로 원장을 덮어쓸 수 없습니다.")
+    client = create_client(saved_relay=args.saved_relay)
     now = parse_instant(args.now) if args.now else datetime.now(SEOUL)
     def snapshot(store):
         profile = resolve_profile(store, args.profile)
@@ -213,8 +214,7 @@ def main(argv=None):
         if not isinstance(supplied, dict) or set(supplied) != {"items"}:
             raise ToolError("INVALID_INPUT", "확인한 품목 items만 전달해 주세요.")
         data["items"] = supplied["items"]
-    load_env(ROOT, os.environ)
-    result = check(data["items"], data["clinical"], create_client(), now, data["profileId"], data["profileAlias"])
+    result = check(data["items"], data["clinical"], client, now, data["profileId"], data["profileAlias"])
     if args.out:
         atomic_write_json(args.out, result)
     return result

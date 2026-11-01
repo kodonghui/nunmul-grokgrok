@@ -130,7 +130,7 @@ class RelayClientTests(OfflineCase):
             source.write_text(json.dumps(READ), encoding="utf-8")
             env = {"PUBLIC_DATA_SERVICE_KEY": "fixture-government-secret", "PUBLIC_DATA_BASE_URL": "https://apis.data.go.kr",
                    "PUBLIC_DATA_RELAY_URL": "https://relay.example.invalid", "PUBLIC_DATA_RELAY_TOKEN": ""}
-            with patch.dict(os.environ, env, clear=True):
+            with patch.dict(os.environ, env, clear=True), patch("tools.rx_lookup.ROOT", Path(temporary)):
                 result = lookup_main(["--in", str(source), "--out", str(target)])
             self.assertEqual(result["cards"][0]["error"]["code"], "NO_RELAY_TOKEN")
             self.assertEqual(result, read_json(target))

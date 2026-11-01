@@ -9,17 +9,18 @@ import re
 import threading
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 
 if __package__:
     from .common import JsonArgumentParser, ToolError, run_cli
     from .dur_rules import DUR_FIELDS, DUR_PATHS, validate_page
+    from .relay_config import validate_url
     from .rx_lookup import (CONNECT_TIMEOUT, EXPLAIN_PATH, PERMIT_PATH, ROOT, PublicDataClient,
                             TimedHTTPConnection, TimedHTTPSConnection, _NoRedirect, load_env)
 else:
     from common import JsonArgumentParser, ToolError, run_cli
     from dur_rules import DUR_FIELDS, DUR_PATHS, validate_page
+    from relay_config import validate_url
     from rx_lookup import (CONNECT_TIMEOUT, EXPLAIN_PATH, PERMIT_PATH, ROOT, PublicDataClient,
                            TimedHTTPConnection, TimedHTTPSConnection, _NoRedirect, load_env)
 
@@ -250,7 +251,7 @@ class RelayClient:
     def __init__(self, environ=None, opener=None, sleeper=None):
         settings = os.environ if environ is None else environ
         self.token = (settings.get("PUBLIC_DATA_RELAY_TOKEN") or "").strip()
-        self.url = (settings.get("PUBLIC_DATA_RELAY_URL") or "").strip().rstrip("/")
+        self.url = settings.get("PUBLIC_DATA_RELAY_URL") or ""
         self.opener = opener if opener is not None else urllib.request.build_opener(
             _RelayHTTPHandler(), _RelayHTTPSHandler(), _NoRedirect())
         self.sleep = sleeper if sleeper is not None else time.sleep
@@ -267,15 +268,7 @@ class RelayClient:
 
     def _get(self, path, parameters, pagination):
         self.require_credentials()
-        try:
-            parsed = urllib.parse.urlsplit(self.url)
-            port = parsed.port
-        except ValueError:
-            raise ToolError("INVALID_RELAY_URL", "중계 HTTPS 주소를 확인해 주세요.") from None
-        loopback = parsed.hostname in ("127.0.0.1", "localhost", "::1")
-        if (not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment
-                or parsed.path or port == 0 or not (parsed.scheme == "https" or loopback and parsed.scheme == "http")):
-            raise ToolError("INVALID_RELAY_URL", "중계 HTTPS 주소를 확인해 주세요.")
+        url = validate_url(self.url)
         if path == PERMIT_PATH:
             payload = {"operation": "permit", "itemName": parameters.get("item_name")}
             if parameters.get("entp_name") is not None:
@@ -287,7 +280,7 @@ class RelayClient:
             payload = {"operation": "dur", "type": kind, "itemSeq": parameters.get("itemSeq"), "pageNo": parameters.get("pageNo")}
         else:
             raise ToolError("RELAY_INVALID_INPUT", ERRORS["RELAY_INVALID_INPUT"])
-        request = urllib.request.Request(self.url + "/v1/query", data=json.dumps(payload).encode(),
+        request = urllib.request.Request(url + "/v1/query", data=json.dumps(payload).encode(),
                                          headers={"Authorization": "Bearer " + self.token,
                                                   "Content-Type": "application/json", "Accept": "application/json"})
         for attempt in range(2):

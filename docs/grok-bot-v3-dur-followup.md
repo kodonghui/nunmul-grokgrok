@@ -7,7 +7,7 @@
 
 1. /workspace/nunmul의 브랜치와 변경 파일 이름을 확인하고 main에서 git pull --ff-only origin main을 실행해. .env/state를 보존하고 충돌/미커밋 변경을 임의로 덮어쓰지 마. git rev-parse HEAD와 python3 -m unittest 결과를 알려 줘. 수정 기준 테스트는198개야.
 2. docs/family-v3.md의 SPEC-DUR-002와 README, docs/grok-bot-v3-prompt.md의 추가된 TYPE_ONLY 지침을 읽고 기존 공식 조회·DUR 스킬에 반영해. 정확한 공식 유형·성분은 있으나 상세가 없는 행은 TYPE_ONLY/content=null/note/match=UNKNOWN이야. lookup=ALL이어도 UNKNOWN일 수 있고 금기 없음이 아니야. 상세나 등급을 지어 채우지 마.
-3. 기존 PUBLIC_DATA_RELAY_URL과 보안 환경의 PUBLIC_DATA_RELAY_TOKEN을 이번 명령에도 연결해. 중계 주소/토큰을 바꿀 필요는 없어. 보안 값이 없으면 보안 입력 기능으로만 요청해. .env를 수정하거나 토큰/헤더/전체 URL/원시 오류를 출력하지 마. 실패 시 직접 API로 전환하지 마.
+3. docs/grok-bot-relay-setup.md대로 기존 PUBLIC_DATA_RELAY_URL과 보안 환경의 PUBLIC_DATA_RELAY_TOKEN을 같은 실행 환경으로 python3 tools/relay_config.py save에 전달해 한 번 저장해. status가 configured=true/mode=relay/source=saved인지 확인해. 모든 rx_lookup.py·dur_lookup.py 조회에 --saved-relay를 붙이고 임시 rx_env_check.sh는 사용하지 마. 보안 값이 없으면 보안 입력 기능으로만 요청해. .env를 수정하거나 토큰/헤더/전체 URL/원시 오류를 출력하지 마. 실패 시 직접 API로 전환하지 마.
 4. 실제 원장 대신 state/probes/dur-recheck/ 아래에 새 격리 시험 원장을 사용해. 같은 디렉터리의 입력 JSON에 {"items":[{"name":"타이레놀정500밀리그램","itemSeq":"202106092"},{"name":"게보린정","itemSeq":"197900277"}]}을 준비해.
    python3 tools/dur_lookup.py --store state/probes/dur-recheck/medication_store.json --in state/probes/dur-recheck/items.json --out state/probes/dur-recheck/result.json
    Codex의 별도 노트북 중계 시험은 8요청 모두 OK, lookup=ALL/result=UNKNOWN, 게보린 임부 TYPE_ONLY1건·갱신일2025-11-10이었어. 네 실제 결과를 확인해서 보고하고 이 예상값을 그대로 답하지 마. 프로필의 실제 임신 여부를 추측하거나 기록하지 마.

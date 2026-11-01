@@ -73,10 +73,11 @@
 - 날짜 변경 뒤 알림은 재계산되고 취소 뒤에는 멈춰. 지난 날짜/등록 전에 지난 알림은 소급하지 않아. 알림은 지금 계정의 채팅이며 동행자에게 별도 메시지를 전송하거나 Google 자체 팝업을 설정했다고 말하지 마.
 
 [4. 공식 조회·DUR 스킬]
-- 기존에 확인한 노트북 중계를 계속 사용해. docs/rx-relay.md의 연결 방식대로 PUBLIC_DATA_RELAY_URL과 별도 PUBLIC_DATA_RELAY_TOKEN을 모든 rx_lookup.py/dur_lookup.py 실행 환경에 전달해. 한 명령에서만 설정한 변수는 다음 명령에 유지됐다고 가정하지 마.
-- 토큰이 없거나 초기화됐으면 보안 입력 카드로만 요청해. .env는 읽기만 하고 임의로 수정하지 마. 주소가 바뀌었으면 운영자가 전달한 새 주소를 사용해. 중계 실패 시 직접 API로 몰래 fallback하지 마.
-- 공식 설명: python3 tools/rx_lookup.py --explain <공식 조회로 확인한 itemSeq>. 출처와 updateDe를 함께 알려 줘.
-- DUR: python3 tools/dur_lookup.py --profile <ID> --out state/dur_result.json.
+- 기존에 확인한 노트북 중계를 계속 사용해. docs/rx-relay.md·docs/grok-bot-relay-setup.md대로 PUBLIC_DATA_RELAY_URL과 별도 PUBLIC_DATA_RELAY_TOKEN을 같은 보안 실행 환경에 전달하고 python3 tools/relay_config.py save로 한 쌍을 한 번 저장해. status가 configured=true/mode=relay/source=saved인지 확인해. 이후 rx_lookup.py·--explain·dur_lookup.py는 자체적으로 저장한 연결을 읽어. 임시 rx_env_check.sh는 실행하지 마.
+- 토큰이 없거나 컴퓨터 초기화로 설정이 사라졌으면 보안 입력 카드로만 요청해. .env는 읽기만 하고 임의로 수정하지 마. 주소/토큰 변경은 두 값을 함께 전달하고 save --replace로 갱신해. RELAY_CONFIG_CONFLICT·파일 손상·누락·권한 오류는 code로 보고하고 임의로 다른 설정과 섞거나 직접 API로 fallback하지 마. 비공개 connection.json은 첨부·출력·커밋하지 마.
+- 이름 검색: python3 tools/rx_lookup.py --saved-relay --in <읽은 약 JSON> --out <후보 JSON>. --saved-relay는 컴퓨터 초기화로 설정 디렉터리가 없어져도 직접 API로 전환하지 않게 해.
+- 공식 설명: python3 tools/rx_lookup.py --saved-relay --explain <공식 조회로 확인한 itemSeq>. 출처와 updateDe를 함께 알려 줘.
+- DUR: python3 tools/dur_lookup.py --saved-relay --profile <ID> --out state/dur_result.json.
 - ‘현재 약과 새 제품을 같이 먹어도 돼?’에는 대상과 두 제품의 정확한 공식 코드를 확인해. 해당 프로필의 비교할 기존 약+새 제품만 {"items":[{"name":"제품명","itemSeq":"공식 코드"},...]} 파일로 만들어 --in <파일>을 추가해. 조회를 위해 새 약을 등록하거나 다른 가족의 약을 합치지 마.
 - 병용·연령·노인·임부 4유형을 필요한 조건에 따라 공식 DUR API로 조회해. e약은요 문구나 네 지식만으로 DUR 성공을 만들지 마. 연령/임신 미확인, 확인 당일이 지난 조건, 복합 연령 조건은 UNKNOWN으로 남겨.
 - lookup ALL/PARTIAL/FAILED/NO_DRUG와 result FOUND/NONE/UNKNOWN, 유형별 출처·조회 시각·공식 갱신일을 확인해. 공식 갱신일이 없으면 없음으로 표시하고 오늘 날짜를 채우지 마.

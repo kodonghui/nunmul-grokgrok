@@ -363,8 +363,16 @@ def explain(item_seq, client):
     return result
 
 
-def create_client(environ=None):
+def create_client(environ=None, *, root=None, saved_relay=False):
     settings = os.environ if environ is None else environ
+    if environ is None or root is not None or saved_relay:
+        if __package__:
+            from .relay_config import resolve_settings
+        else:
+            from relay_config import resolve_settings
+        settings, source = resolve_settings(ROOT if root is None else root, settings, load_env)
+        if saved_relay and source != "saved":
+            raise ToolError("RELAY_CONFIG_MISSING", "중계 설정을 먼저 보안 입력으로 저장해 주세요.")
     if settings.get("PUBLIC_DATA_RELAY_URL") or settings.get("PUBLIC_DATA_RELAY_TOKEN"):
         if __package__:
             from .rx_relay import RelayClient
@@ -379,13 +387,13 @@ def main(argv=None):
     parser.add_argument("--in", dest="input", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--explain")
+    parser.add_argument("--saved-relay", action="store_true", help="저장한 중계 설정만 사용하고 없으면 중단")
     args = parser.parse_args(argv)
     if args.explain is None and (args.input is None or args.out is None):
         parser.error("조회에는 --in과 --out이 필요합니다.")
     if args.explain is not None and (args.input is not None or args.out is not None):
         parser.error("--explain과 파일 조회는 따로 실행해 주세요.")
-    load_env(ROOT, os.environ)
-    client = create_client()
+    client = create_client(saved_relay=args.saved_relay)
     if args.explain is not None:
         return explain(args.explain, client)
     result = lookup(read_json(args.input), client)

@@ -3,6 +3,7 @@ from datetime import timedelta
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -325,9 +326,11 @@ class FamilyCliTests(unittest.TestCase):
     def test_profiles_voice_draft_confirm_and_family_scoped_cli(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
+            for name in ("tools", "config"):
+                shutil.copytree(ROOT / name, directory / name, ignore=shutil.ignore_patterns("__pycache__"))
             env = {**os.environ, "PUBLIC_DATA_SERVICE_KEY": "", "PUBLIC_DATA_BASE_URL": "https://apis.data.go.kr", "PUBLIC_DATA_RELAY_URL": "", "PUBLIC_DATA_RELAY_TOKEN": ""}
             def call(script, *args, ok=True):
-                result = subprocess.run([sys.executable, "-S", "-B", str(ROOT / "tools" / script), *args], cwd=directory, env=env,
+                result = subprocess.run([sys.executable, "-S", "-B", str(directory / "tools" / script), *args], cwd=directory, env=env,
                                         capture_output=True, text=True, encoding="utf-8", timeout=15)
                 self.assertEqual(result.returncode == 0, ok, result.stdout + result.stderr)
                 self.assertEqual(result.stderr, "")

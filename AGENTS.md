@@ -16,6 +16,7 @@
 - 레포는 공개해도 되게 만든다(비밀값·개인정보 없음). Bot Marketplace에 봇 템플릿으로 올리면 다른 사람 봇이 이 레포를 받아 쓴다.
 - 로컬(윈도우)에서는 py 또는 python으로 돌려도 된다. 경로는 pathlib로 다루고 파일은 UTF-8로 읽고 쓴다.
 - 한국 노트북 조회 중계는 1절의 선택 연결 방식이다. `PUBLIC_DATA_RELAY_URL`·`PUBLIC_DATA_RELAY_TOKEN`이 있으면 별도 인증으로 조회만 중계하며 공식 서비스 키는 노트북에 둔다. 중계 설정이 불완전하면 직접 조회로 몰래 전환하지 않는다. 중계 계약은 `docs/rx-relay.md`와 `api/relay.openapi.json`을 먼저 따른다. 4절 책상 친구와는 별개다.
+- 중계 클라이언트는 `tools/relay_config.py save`로 같은 보안 실행 환경의 주소·별도 토큰을 비공개 `state/runtime/rx-client/connection.json`에 한 쌍으로 저장할 수 있다. 이름 검색·설명·DUR가 같은 설정을 자동으로 읽는다. `.env`는 수정하지 않는다. 값 출력·첨부·커밋은 금지하며, 설정 충돌·손상·누락은 직접 API fallback 없이 오류로 중단한다. 값 변경은 `save --replace`, 확인은 값이 없는 `status`를 사용한다. 임시 `rx_env_check.sh`에 의존하지 않는다.
 - 사용자가 승인한 책상 버튼의 백엔드 수신은 `tools/desk_event.py`와 `docs/desk-receiver.md`를 따른다. 장치 소스는 별도 desk worktree에서만 수정한다. 수신 CLI는 기존 v3 원장 안에서 프로필·회차·일정 버전·중복을 검증하며 HTTP 접수와 실제 기록 결과를 구분한다.
 
 ## 데이터 모양
