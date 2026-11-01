@@ -35,6 +35,7 @@
 - totalCount·pageNo·페이지별 수·ITEM_SEQ·유형·내용·상대 품목코드를 검증하고 전체 페이지를 확인한다. 반복 페이지·출처 불일치·일부 페이지 실패·상한 초과는 완전 조회로 보지 않는다. 한 유형 최대100페이지/10,000행이며 초과는 미확인이다.
 - 병용은 두 실제 품목코드를 대조한다. 연령은 확인된 나이와 단순 세/개월 단일 조건만 대조하며 복합 조건은 UNKNOWN이다. 노인/임부 조건 미확인은 조건부 안내로 남기고 별칭·성별로 추측하지 않는다.
 - 결과는 lookup=ALL/PARTIAL/FAILED/NO_DRUG, result=FOUND/NONE/UNKNOWN, 조회 수·미확인 품목/유형·출처·조회 시각·공식 갱신일을 반환한다. FAILED/PARTIAL·UNKNOWN은 ‘금기 없음’이 아니다. NONE은 확인한 범위의 미발견이며 안전/복용 가능을 보장하지 않는다. 진단·처방·용량 조절은 하지 않는다.
+- 공식 유형 분류만 있는 행(SPEC-DUR-002): 품목코드가 정확하고 TYPE_NAME이 요청한 연령/노인/임부 분류와 일치하며 성분명이 있지만 PROHBT_CONTENT가 null/공백인 경우가 있다. 이를 `detailStatus=TYPE_ONLY`로 보존한다. 내용이 있는 행은 PROVIDED, 내용/상대품목이 없는 병용 호환 행은 EMPTY_INTERACTION이다. 분류만 있는 행도 공식 갱신일·성분을 유지하고 출처별 missingDetailCount로 센다. 적용 조건이 있는 경고는 content=null, 상세 미제공 note, match=UNKNOWN으로 반환하며 NONE으로 누락하지 않는다. lookup=ALL은 모든 요청/페이지를 수집했다는 뜻이고 상세의 충분성은 result/detailStatus로 구분한다. 다른 유형 분류, 품목 불일치, 성분도 없는 빈 행, 숫자 등 잘못된 상세 필드는 기존 오류로 유지한다. 외부 웹페이지의 내용을 API의 상세값으로 자동 채우지 않는다.
 - 직접/노트북 중계 모두 같은 코드와 결과 계약이다. 중계에는 operation=dur, type·itemSeq·pageNo만 추가 허용하고 공식 경로·100행 페이지 크기를 고정한다. 공식 키·환자 프로필/나이/임신 조건은 중계에 보내지 않는다. 조건 대조는 그록 컴퓨터의 Python이 한다.
 - PublicDataClient.get_page/RelayClient.get_page가 페이지 메타데이터를 제공한다. 기존 get과 permit/explain 응답은 유지한다. 공급자 실패를 다른 이름 재검색이나 직접 API fallback으로 감추지 않는다.
 
