@@ -41,7 +41,7 @@
    이 단계는 초안만 저장해. 아직 약/방문 일정이나 실제 Calendar에 저장됐다고 말하지 마. 기존 원장을 직접 편집하지 마.
 4) 대상·제품·양·기간·시각 또는 방문 일시·동행자·알림을 요약해 실제 사용자 동의/명확한 지시와 대조해. 모델이 생성한 ‘동의’는 근거가 아니야.
 5) python3 tools/intake.py confirm <실제 draftId> --profile <ID> --accept
-   반환된 실제 약/일정 ID만 사용해. 재실행은 같은 draftId로 해. DRAFT_EXPIRED/REVISION_CONFLICT이면 새 초안을 만들고 최신 내용으로 대조해. 오래된 --accept를 재사용하지 마.
+   dose.mark 확정에는 --with-images를 추가하고 반환된 image.path의 실제 PNG를 첨부해. 반환된 실제 약/일정 ID만 사용해. 재실행은 같은 draftId로 해. DRAFT_EXPIRED/REVISION_CONFLICT이면 새 초안을 만들고 최신 내용으로 대조해. 오래된 --accept를 재사용하지 마.
 6) 정정은 새 요청 ID와 propose --replace <이전 draftId>. 미확정 초안 취소는 intake.py cancel <draftId> --profile <ID>. 이미 확정된 내용은 해당 관리 action으로 변경해.
 7) 승인된 calendarChanges만 아래 절차로 반영해. 원장 저장과 실제 Calendar 결과를 구분해 보고해.
 
@@ -60,7 +60,7 @@
 - medicine.clear: {"medicineId":"ID"} → 약은 남기고 일정만 비움.
 - medicine.delete: {"medicineId":"ID"} → 현재 목록에서 제외, 과거 기록은 보존.
 - dose.mark / dose.skip: {"key":"실제 프로필 포함 key","medicineIds":["특정 약 ID"]}. medicineIds 생략은 그 회차 전체야. 특정 약만 먹었다면 전체를 확인하지 마. 모호한 ‘그만/삭제’는 대상 의미를 확인해.
-- ‘먹었어’의 빠른 도구 연결도 가능해: dose_state.py mark <실제 key> --profile <ID> --medicine-id <약ID> --store state/medication_store.json --source chat. --medicine-id는 필요할 때만 써.
+- ‘먹었어’의 빠른 도구 연결도 가능해: dose_state.py mark <실제 key> --profile <ID> --medicine-id <약ID> --store state/medication_store.json --source chat --with-images. --medicine-id는 필요할 때만 써. image가 있을 때만 웃는 PNG를 첨부하고 공통 초안 경로와 중복 실행하지 마.
 
 병원 방문/일반 일정 action:
 - appointment.add payload={"title":"병원 방문","start":"시간대 있는 ISO","end":"시간대 있는 ISO","caregiver":"동행자 별칭 또는 null","reminderDays":[7,1],"reminderTime":"09:00"}
@@ -96,9 +96,10 @@
 
 [6. 약·방문 순찰]
 - 기존 이 봇 소유의 순찰 한 개를 갱신해. 없으면 네이티브 루틴으로 한 개만 만들어. 사용자가 복용/방문 알림을 요청했으므로 이 봇의 해당 루틴 연결은 승인된 범위야. 실제 지원 주기/실행 기능을 확인하고 안 되는 주기를 됐다고 말하지 마.
-- 루틴 이름 ‘울보 순찰’, Asia/Seoul. 가능하면 1분 주기. 더 긴 최소 주기만 가능하면 실제 지연을 보고해. 약별·프로필별 루틴을 따로 복제하지 마.
-- 실행마다 현재 시각을 도구로 확인하고 python3 tools/dose_state.py due --store state/medication_store.json --now <현재 ISO>를 한 번 실행해. 프로필을 생략하면 가족별로 구분된 전체 알림이야.
-- send가 빈 목록이면 아무 메시지도 보내지 마. 각 send.say만 현재 계정에 전달해. 약 재촉과 방문 사전 알림에 표시된 별칭/동행자를 유지해. 확인이 없다는 것을 안 먹었다고 단정하지 마.
+- 루틴 이름 ‘울보 순찰’, Asia/Seoul. 실제 지원하는 5분 주기를 사용하고 실행 지연을 보고해. 약별·프로필별 루틴을 따로 복제하지 마.
+- 실행마다 현재 시각을 도구로 확인하고 python3 tools/dose_state.py due --store state/medication_store.json --now <현재 ISO> --with-images를 한 번 실행해. 프로필을 생략하면 가족별로 구분된 전체 알림이야.
+- send가 빈 목록이면 아무 메시지도 보내지 마. 각 send.say를 현재 계정에 전달하고 image가 있으면 image.path의 실제 PNG를 함께 첨부해. alt나 파일 경로만 적은 것을 첨부 완료로 말하지 마. 자세한 규칙은 docs/notification-images.md·docs/grok-bot-notification-images-setup.md를 따라. 약 재촉과 방문 사전 알림에 표시된 별칭/동행자를 유지해. 확인이 없다는 것을 안 먹었다고 단정하지 마.
+- 채팅의 dose_state.py mark --source chat, dose.mark의 intake.py confirm --accept에는 --with-images를 붙여. 반환 결과에 image가 있을 때만 웃는 PNG를 첨부해. 초안·부분 확인·재실행·실패에는 전체 완료 미소를 임의로 붙이지 마. 기존 결과를 보관해 첨부 실패를 재시도하고, 그 목적으로 due/mark/confirm을 다시 호출하지 마. 책상친구 수신·프로토콜·앱 아바타는 변경하지 마.
 - 23:00~07:00에는 조용히 처리해. 놓친 단계를 한꺼번에 보내지 마. due는 반환할 때 발송 단계를 기록하므로 전송 실패까지 보장하는 큐는 아니야.
 - due 뒤 calendar-plan을 확인하고 사용자가 승인한 기존 일정 상태의 반영만 처리해. 순찰에서 새 약/병원 방문을 임의 등록하지 마.
 - 실제 루틴 생성/갱신 결과와 다음 실행 시각을 확인한 뒤에만 ‘알림 연결 완료’라고 말해. 단위 테스트 성공은 루틴 작동의 증거가 아니야.

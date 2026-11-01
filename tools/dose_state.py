@@ -12,8 +12,10 @@ else:
 
 if __package__:
     from .dose_rules import VOICE_PATH, is_quiet, phase_at, validate_voice as _voice
+    from .notification_images import attach_due, attach_mark, family_mark_rows, load_catalog, taken_ids
 else:
     from dose_rules import VOICE_PATH, is_quiet, phase_at, validate_voice as _voice
+    from notification_images import attach_due, attach_mark, family_mark_rows, load_catalog, taken_ids
 
 
 STATES = {"PENDING", "TAKEN", "MISSED", "SKIPPED"}
@@ -138,6 +140,8 @@ def main(argv=None):
             sub.add_argument("--at")
         if command == "mark":
             sub.add_argument("--source", required=True, choices=("chat", "desk"))
+        if command in ("due", "mark"):
+            sub.add_argument("--with-images", action="store_true", help="검증한 공개 표정 이미지의 첨부 정보를 반환")
     args = parser.parse_args(argv)
     if args.command == "due" and args.medicine_id:
         parser.error("--medicine-id는 mark와 skip에서 사용해 주세요.")
@@ -146,17 +150,21 @@ def main(argv=None):
     if args.store is not None and (args.schedule is not None or args.doses is not None):
         parser.error("--store와 v1 상태 파일을 함께 지정할 수 없습니다.")
     use_store = args.store is not None or (args.schedule is None and args.doses is None)
+    catalog = load_catalog() if getattr(args, "with_images", False) else None
     if use_store:
         if __package__:
-            from .family_store import DEFAULT_STORE, due as store_due, mark as store_mark, transact
+            from .family_store import DEFAULT_STORE, due as store_due, mark as store_mark, resolve_profile, transact
         else:
-            from family_store import DEFAULT_STORE, due as store_due, mark as store_mark, transact
+            from family_store import DEFAULT_STORE, due as store_due, mark as store_mark, resolve_profile, transact
         def action(store):
             if args.command == "due":
-                return store_due(store, now, read_json(VOICE_PATH), args.profile)
-            return store_mark(store, args.profile, now, source=args.source if args.command == "mark" else None,
+                result = store_due(store, now, read_json(VOICE_PATH), args.profile)
+                return attach_due(result, catalog) if catalog is not None else result
+            previous = taken_ids(resolve_profile(store, args.profile)["store"]["doses"]) if catalog is not None else None
+            result = store_mark(store, args.profile, now, source=args.source if args.command == "mark" else None,
                               key=args.key, medicine_ids=args.medicine_id, skip=args.command == "skip",
                               voice=read_json(VOICE_PATH) if args.command == "mark" else None)
+            return attach_mark(result, previous, family_mark_rows(store, result), catalog, args.source) if catalog is not None else result
         return transact(args.store or DEFAULT_STORE, action, now)
     if args.medicine_id or args.profile:
         parser.error("--medicine-id/--profile은 가족 원장 모드에서 사용해 주세요.")
@@ -169,9 +177,15 @@ def main(argv=None):
         if args.command == "due":
             result = due(schedule, doses, now, read_json(VOICE_PATH))
         elif args.command == "mark":
+            previous = taken_ids(doses) if catalog is not None else None
             result = mark(schedule, doses, now, args.source, read_json(VOICE_PATH), args.key)
+            if catalog is not None:
+                rows = [(result["marked"], doses[result["marked"]])] if result.get("marked") is not None else []
+                result = attach_mark(result, previous, rows, catalog, args.source)
         else:
             result = skip(schedule, doses, now, args.key)
+        if args.command == "due" and catalog is not None:
+            result = attach_due(result, catalog)
         atomic_write_json(doses_path, doses)
     return result
 

@@ -79,6 +79,21 @@ Grok의 음성/텍스트 해석 → `intake.py propose` → 실제 동의 또는
 
 Python 도구는 사진 판독·캘린더 쓰기·채팅 전송을 하지 않습니다. `calendarChanges`와 `send`는 봇이 실행할 결과 데이터입니다. 예약 실행도 이 저장소에서 설치하지 않습니다.
 
+## 우는·웃는 이미지 알림
+
+`--with-images`를 붙이면 복용 재촉1/2/3단계에 글썽·한 방울·두 방울 PNG의 첨부 정보가 `send[].image`로 추가됩니다. 채팅에서 새 복용 확인을 저장하고 해당 회차의 활성 약 전체가 TAKEN이면 최상위 `image`에 미소가 붙습니다. 부분 확인·재실행·대상 없음·실패·desk 출처에는 전체 확인 미소가 없습니다. 방문·재방문·MISSED 알림은 기존 문구만 유지합니다.
+
+```sh
+python3 tools/notification_images.py
+python3 tools/dose_state.py due --store state/medication_store.json --now <현재 ISO> --with-images
+python3 tools/dose_state.py mark <실제 회차key> --profile <프로필> --source chat --with-images
+python3 tools/intake.py confirm <dose.mark 초안ID> --profile <프로필> --accept --with-images
+```
+
+PNG 네 장은 저장소에 포함되어 실행 시 이미지 생성 API나 추가 패키지가 필요 없습니다. 경로·PNG 형식·크기·SHA256을 상태 변경 전에 검사합니다. **Grok이 `image.path`의 실제 파일을 채팅에 첨부해야** 그림이 표시됩니다. 경로나 alt만 적은 것은 이미지 첨부가 아닙니다. 첨부 실패 시 최초 결과로 이미지만 다시 보내며 due/mark를 재실행하지 않습니다. 기존 구조는 채팅 전달 성공을 보장하는 outbox가 아닙니다.
+
+옵션 없는 명령·원장 스키마는 그대로이며 `.env`·의료 기록을 이미지에 넣지 않습니다. 이 기능은 앱 아바타 자동 교체·울음 음성·애니메이션·책상친구 변경을 포함하지 않습니다. [명세](docs/notification-images.md), [그록 적용·합성 시연 프롬프트](docs/grok-bot-notification-images-setup.md)를 따릅니다. 단위 테스트 통과와 실제 채팅 첨부 성공을 구분합니다.
+
 ## 약별 일정 관리
 
 | 명령 | 결과 |

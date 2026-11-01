@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "images": {
+    "step1": {
+      "file": "step1-teary-v1.png",
+      "alt": "약 드실 시간이에요. 눈가에 눈물이 맺힌 눈물이",
+      "sha256": "dcf24680a255880ae3cb7dda174bda10f4782d28e6db44cce294111491af02f5"
+    },
+    "step2": {
+      "file": "step2-one-tear-v1.png",
+      "alt": "아직 복용 확인이 없어요. 눈물 한 방울이 흐르는 눈물이",
+      "sha256": "1c3427feb6e0b4adae6c66bb7401dabe4c6632b46762a3c2acf00e46c1b10ae9"
+    },
+    "step3": {
+      "file": "step3-two-tears-v1.png",
+      "alt": "아직 복용 확인이 없어요. 두 줄기 눈물이 흐르는 눈물이",
+      "sha256": "58a2a67137d787cb03162acb8e29a0044d4a90b66f6c8f8f4816ada5dfa5e030"
+    },
+    "taken": {
+      "file": "taken-smile-v1.png",
+      "alt": "이번 회차의 복용 확인을 기록했어요. 눈물을 멈추고 웃는 눈물이",
+      "sha256": "8f9ce8fd59353238bc8ccee093b462a90db4f13eaa22d4f8da784c48cb6bbd01"
+    }
+  }
+}

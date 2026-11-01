@@ -18,6 +18,7 @@
 - 한국 노트북 조회 중계는 1절의 선택 연결 방식이다. `PUBLIC_DATA_RELAY_URL`·`PUBLIC_DATA_RELAY_TOKEN`이 있으면 별도 인증으로 조회만 중계하며 공식 서비스 키는 노트북에 둔다. 중계 설정이 불완전하면 직접 조회로 몰래 전환하지 않는다. 중계 계약은 `docs/rx-relay.md`와 `api/relay.openapi.json`을 먼저 따른다. 4절 책상 친구와는 별개다.
 - 중계 클라이언트는 `tools/relay_config.py save`로 같은 보안 실행 환경의 주소·별도 토큰을 비공개 `state/runtime/rx-client/connection.json`에 한 쌍으로 저장할 수 있다. 이름 검색·설명·DUR가 같은 설정을 자동으로 읽는다. `.env`는 수정하지 않는다. 값 출력·첨부·커밋은 금지하며, 설정 충돌·손상·누락은 직접 API fallback 없이 오류로 중단한다. 값 변경은 `save --replace`, 확인은 값이 없는 `status`를 사용한다. 임시 `rx_env_check.sh`에 의존하지 않는다.
 - 사용자가 승인한 책상 버튼의 백엔드 수신은 `tools/desk_event.py`와 `docs/desk-receiver.md`를 따른다. 장치 소스는 별도 desk worktree에서만 수정한다. 수신 CLI는 기존 v3 원장 안에서 프로필·회차·일정 버전·중복을 검증하며 HTTP 접수와 실제 기록 결과를 구분한다.
+- 채팅의 우는·웃는 PNG 첨부는 `docs/notification-images.md`를 따른다. `dose_state.py due/mark --with-images`, `intake.py confirm --with-images`가 검증한 공개 파일의 `image` 정보를 반환하고 실제 첨부는 Grok이 한다. 프로필 아바타 변경·음성 울음·책상친구와는 별개이며, 옵션 없는 출력/원장 스키마는 유지한다. 자산은 상태 변경 전에 검사하고 부분 확인·재실행·desk 접수에는 전체 복용 완료 미소를 붙이지 않는다.
 
 ## 데이터 모양
 누적형 내 약의 원장은 `state/medication_store.json`이다. 현행은 가족별 v2 하위 원장을 포함하는 schemaVersion=3이다. 상세 계약은 [docs/family-v3.md](docs/family-v3.md)를 먼저 따른다. [docs/my-meds-v2.md](docs/my-meds-v2.md)의 약·복용 규칙과 순수 함수는 하위 원장/호환 기준으로 유지한다. `profiles.py`, `my_meds.py`, `intake.py`, `dur_lookup.py`를 사용한다. 프로필이 여러 개면 수정·복용 확인에는 프로필을 명시한다.

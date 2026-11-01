@@ -8,11 +8,13 @@ from uuid import uuid4
 if __package__:
     from .common import JsonArgumentParser, SEOUL, ToolError, iso, parse_instant, read_json, run_cli
     from .dose_rules import VOICE_PATH
+    from .notification_images import attach_mark, family_mark_rows, load_catalog, taken_ids
     from . import family_store as family
     from . import med_store as meds
 else:
     from common import JsonArgumentParser, SEOUL, ToolError, iso, parse_instant, read_json, run_cli
     from dose_rules import VOICE_PATH
+    from notification_images import attach_mark, family_mark_rows, load_catalog, taken_ids
     import family_store as family
     import med_store as meds
 
@@ -153,15 +155,21 @@ def main(argv=None):
             sub.add_argument("draft_id")
         if command == "confirm":
             sub.add_argument("--accept", action="store_true")
+            sub.add_argument("--with-images", action="store_true", help="복용 확인 최초 성공에 미소 이미지 첨부 정보를 반환")
     args = parser.parse_args(argv)
     at = parse_instant(args.at) if args.at else datetime.now(SEOUL)
+    catalog = load_catalog() if getattr(args, "with_images", False) else None
     def action(store):
         if args.command == "appointments":
             return family.appointment_action(store, args.profile, "list", at)
         if args.command == "propose":
             return propose(store, read_json(args.input), at, args.profile, args.replace)
         if args.command == "confirm":
-            return confirm(store, args.draft_id, at, args.profile, args.accept)
+            draft = store["drafts"].get(args.draft_id)
+            dose_mark = catalog is not None and draft is not None and draft["action"] == "dose.mark"
+            previous = taken_ids(family.resolve_profile(store, args.profile)["store"]["doses"]) if dose_mark else None
+            result = confirm(store, args.draft_id, at, args.profile, args.accept)
+            return attach_mark(result, previous, family_mark_rows(store, result), catalog) if dose_mark else result
         return cancel(store, args.draft_id, args.profile)
     return family.transact(args.store, action, at, include_changes=args.command == "confirm")
 
